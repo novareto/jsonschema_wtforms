@@ -1,4 +1,5 @@
-from typing import Optional, Iterable, Any, TypedDict
+import wtforms.fields
+from typing import Optional, List, Any, TypedDict
 from jsonschema_wtforms._fields import MultiCheckboxField
 from jsonschema_wtforms.validators import NumberRange
 
@@ -16,31 +17,42 @@ converters = {
 }
 
 
-def constraints_from_params(type_: str, required: bool, **params):
+def constraints_from_params(required: bool = False, **params):
+    """Extract constraints from parameters.
+    This is agnostic, it won't check if the constraints match the type.
+    This kind of verification belongs to the schema.
+    """
     constraints = {
         'validators': []
     }
+    available = set(params.keys())
     if required:
         constraints['validators'].append(wtforms.validators.DataRequired())
     else:
         constraints['validators'].append(wtforms.validators.Optional())
-    if 'min' in params or 'max' in params:
+    if {'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'
+       } & available:
         constraints['validators'].append(NumberRange(
             min=params.pop('minimum', None),
             max=params.pop('maximum', None),
-            exclusive_min=params.pop('exclusiveMinimum', False),
-            exclusive_max=params.pop('exclusiveMaximum', False)
+            exclusive_min=params.pop('exclusiveMinimum', None),
+            exclusive_max=params.pop('exclusiveMaximum', None)
         ))
-    if (enum := params.pop('enum', None)) is not None:
-        constraints['choices'] = enum
-    if (min_entries := params.pop('minItems', None)) is not None:
-        constraints['min_entries'] = min_entries
-    if (max_entries := params.pop('maxItems', None)) is not None:
-        constraints['max_entries'] = max_entries
-    if params:
-        raise NotImplementedError(
-            f'Field parameters were not all consumed: {params}')
-
+    if {'minLength', 'maxLength'} & available:
+        constraints['validators'].append(wtforms.validators.Length(
+            min=params.pop('minLength', -1),
+            max=params.pop('maxLength', -1)
+        ))
+    if 'pattern' in params:
+        constraints['validators'].append(wtforms.validators.Regexp(
+            params.pop('pattern')
+        ))
+    if 'enum' in available:
+        constraints['choices'] = params.pop('enum')
+    if 'minItems' in available:
+        constraints['min_entries'] = params.pop('minItems')
+    if 'maxItems' in available:
+        constraints['max_entries'] = params.pop('maxItems')
     return constraints
 
 
@@ -51,7 +63,7 @@ class Metadata(TypedDict):
 
 
 class Field:
-    type_: string
+    type_: str
     metadata: Metadata
     required: bool
     readonly: bool = False
@@ -60,25 +72,31 @@ class Field:
     subfield: wtforms.fields.Field = None
 
     def __init__(self, name, required, **params):
-        self.required = required
-        self.type_ = params.pop('type', None)
-        if not isinstance(self.type_, str):
+        type_ = params.pop('type', None)
+        if type_ is None:
+            raise KeyError(f'Property of undefined type: {params!r}.')
+        if not isinstance(type_, str):
             raise NotImplementedError(
-                f"Property {name}: unsupported type '{self.type_!r}'.")
+                f"Property {name}: unsupported type '{type_!r}'.")
+
+        self.type_ = type_
         self.required = required
         self.metadata = {
             'default': params.pop('default', None),
             'description': params.pop('descriptions', None),
             'label': params.pop('title', name),
         }
-        if (items := params.pop('items')) is not None:
-            self.subfield = Field(name, required=True, **items)
+        if (items := params.pop('items', None)) is not None:
+            if isinstance(items, list):
+                # This is a tuple declaration.
+                # Currently unhandled
+                raise NotImplementedError(
+                    "Array from Tuple is not implemented")
+            self.subfield = Field(name, required, **items)
         self.params = params
 
-    def __call__(self):
-        options = constraints_from_params(
-            self.type_, self.required, **self.params)
-
+    def cast(self):
+        options = constraints_from_params(self.required, **self.params)
         factory = self.factory  # handpicked factory
         if self.type_ == 'array' and self.subfield is not None:
             if factory is not None:
@@ -93,5 +111,8 @@ class Field:
                 raise TypeError(
                     f'{self.type_} cannot be converted to a WTForms field'
                 )
+        return factory, {**self.metadata, **options}
 
-        return factory(**{**self.metadata, **options})
+    def __call__(self):
+        factory, options = self.cast()
+        return factory(**options)
