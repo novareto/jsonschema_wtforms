@@ -1,7 +1,6 @@
 import jsonschema
 import wtforms.form
-from typing import Dict, Type, Iterable, Optional
-from jsonschema_wtforms.field import Field
+from typing import Dict, Type, Iterable, Optional, Callable
 
 
 JSONSchema = Dict
@@ -27,7 +26,7 @@ class Form(wtforms.form.BaseForm):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def from_fields(cls, fields: Iterable[Field]):
+    def from_fields(cls, fields: Iterable):
         fields = {name: field() for name, field in fields.items()}
         return cls(fields)
 

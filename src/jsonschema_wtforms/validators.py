@@ -12,8 +12,8 @@ class NumberRange:
                  message=None):
         self.min = min
         self.max = max
-        self.exclusive_min=False
-        self.exclusive_max=False
+        self.exclusive_min = exclusive_min
+        self.exclusive_max = exclusive_max
         self.message = message
         self.field_flags = {}
         if self.min is not None:
@@ -28,22 +28,24 @@ class NumberRange:
                 if self.min is not None and data < self.min:
                     raise ValidationError(
                         field.gettext("Number must be at least %(min)s.")
-                        % self.min
+                        % {'min': self.min}
                     )
-                if self.exclusive_min and data <= self.min:
+                if (self.exclusive_min is not None and
+                    data <= self.exclusive_min):
                     raise ValidationError(
                         field.gettext("Number must be over %(min)s.")
-                        % self.exclusive_min
+                        % {'min': self.exclusive_min}
                     )
                 if self.max is not None and data > self.max:
                     raise ValidationError(
                         field.gettext("Number must be at most %(max)s.")
-                        % self.max
+                        % {'max': self.max}
                     )
-                if self.exclusive_max and data >= self.max:
+                if (self.exclusive_max is not None and
+                    data >= self.exclusive_max):
                     raise ValidationError(
                         field.gettext("Number must be under %(max)s.")
-                        % self.exclusive_max
+                        % {'max': self.exclusive_max}
                     )
             except ValidationError:
                 if self.message:

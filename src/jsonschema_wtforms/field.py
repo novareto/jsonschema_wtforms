@@ -1,118 +1,167 @@
+import re
 import wtforms.fields
-from typing import Optional, List, Any, TypedDict
+import wtforms.fields.html5
+from functools import partial
+from typing import Tuple, Optional, Dict, List, Any, TypedDict, ClassVar, Type
 from jsonschema_wtforms._fields import MultiCheckboxField
 from jsonschema_wtforms.validators import NumberRange
+from jsonschema_wtforms.converter import JSONFieldParameters, converter
 
 
-Choices = Optional[List[Any]]
-
-
-converters = {
-    "string": wtforms.fields.StringField,
-    "integer": wtforms.fields.IntegerField,
-    "number": wtforms.fields.FloatField,
-    "boolean": wtforms.fields.BooleanField,
-    "array": MultiCheckboxField,
-    "$ref": wtforms.fields.FormField
+string_formats = {
+    'default': wtforms.fields.StringField,
+    'date': wtforms.fields.html5.DateField,
+    'time': wtforms.fields.html5.TimeField,
+    'date-time': wtforms.fields.html5.DateTimeField,
+    'email': wtforms.fields.html5.EmailField,
+    'ipv4': wtforms.fields.StringField,
+    'ipv6': wtforms.fields.StringField
 }
 
 
-def constraints_from_params(required: bool = False, **params):
-    """Extract constraints from parameters.
-    This is agnostic, it won't check if the constraints match the type.
-    This kind of verification belongs to the schema.
-    """
-    constraints = {
-        'validators': []
+@converter.register('string')
+class StringParameters(JSONFieldParameters):
+
+    supported = {'string'}
+    allowed = {
+        'format', 'pattern', 'enum', 'minLength', 'maxLength'
     }
-    available = set(params.keys())
-    if required:
-        constraints['validators'].append(wtforms.validators.DataRequired())
-    else:
-        constraints['validators'].append(wtforms.validators.Optional())
-    if {'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'
-       } & available:
-        constraints['validators'].append(NumberRange(
-            min=params.pop('minimum', None),
-            max=params.pop('maximum', None),
-            exclusive_min=params.pop('exclusiveMinimum', None),
-            exclusive_max=params.pop('exclusiveMaximum', None)
-        ))
-    if {'minLength', 'maxLength'} & available:
-        constraints['validators'].append(wtforms.validators.Length(
-            min=params.pop('minLength', -1),
-            max=params.pop('maxLength', -1)
-        ))
-    if 'pattern' in params:
-        constraints['validators'].append(wtforms.validators.Regexp(
-            params.pop('pattern')
-        ))
-    if 'enum' in available:
-        constraints['choices'] = params.pop('enum')
-    if 'minItems' in available:
-        constraints['min_entries'] = params.pop('minItems')
-    if 'maxItems' in available:
-        constraints['max_entries'] = params.pop('maxItems')
-    return constraints
 
+    def get_factory(self):
+        if self.factory is not None:
+            return self.factory
+        if 'choices' in self.attributes:
+            return wtforms.fields.SelectField
+        format = self.attributes.get('format', 'default')
+        return string_formats[format]
 
-class Metadata(TypedDict):
-    default: Any
-    description: str
-    label: str
-
-
-class Field:
-    type_: str
-    metadata: Metadata
-    required: bool
-    readonly: bool = False
-    choices: Choices = None
-    factory: Optional[wtforms.fields.Field] = None
-    subfield: wtforms.fields.Field = None
-
-    def __init__(self, name, required, **params):
-        type_ = params.pop('type', None)
-        if type_ is None:
-            raise KeyError(f'Property of undefined type: {params!r}.')
-        if not isinstance(type_, str):
-            raise NotImplementedError(
-                f"Property {name}: unsupported type '{type_!r}'.")
-
-        self.type_ = type_
-        self.required = required
-        self.metadata = {
-            'default': params.pop('default', None),
-            'description': params.pop('descriptions', None),
-            'label': params.pop('title', name),
-        }
-        if (items := params.pop('items', None)) is not None:
-            if isinstance(items, list):
-                # This is a tuple declaration.
-                # Currently unhandled
+    @classmethod
+    def extract(cls, params: dict, available: str):
+        validators = []
+        attributes = {}
+        if {'minLength', 'maxLength'} & available:
+            validators.append(wtforms.validators.Length(
+                min=params.get('minLength', -1),
+                max=params.get('maxLength', -1)
+            ))
+        if 'pattern' in available:
+            validators.append(wtforms.validators.Regexp(
+                re.compile(params['pattern'])
+            ))
+        if 'enum' in available:
+            attributes['choices'] = params['enum']
+        if 'format' in available:
+            format = attributes['format'] = params['format']
+            if not format in string_formats:
                 raise NotImplementedError(
-                    "Array from Tuple is not implemented")
-            self.subfield = Field(name, required, **items)
-        self.params = params
+                    f'String format not implemented: {format}.')
 
-    def cast(self):
-        options = constraints_from_params(self.required, **self.params)
-        factory = self.factory  # handpicked factory
-        if self.type_ == 'array' and self.subfield is not None:
-            if factory is not None:
-                assert issubclass(self.factory, wtforms.fields.FieldList)
-            else:
-                factory = wtforms.fields.FieldList
-            return factory(self.subfield(), **{**self.metadata, **options})
+            if format == 'ipv4':
+                validators.append(wtforms.validators.IPAddress(
+                    ipv4=True, ipv6=False))
+            if format == 'ipv6':
+                validators.append(wtforms.validators.IPAddress(
+                    ipv4=False, ipv6=True))
+        return validators, attributes
 
-        if factory is None:
-            factory = converters.get(self.type_)
-            if factory is None:
-                raise TypeError(
-                    f'{self.type_} cannot be converted to a WTForms field'
+
+@converter.register('integer')
+@converter.register('number')
+class NumberParameters(JSONFieldParameters):
+
+    supported = {'integer', 'number'}
+    allowed = {
+        'enum',
+        'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'
+    }
+
+    def get_factory(self):
+        if self.factory is not None:
+            return self.factory
+        if 'choices' in self.attributes:
+            return wtforms.fields.SelectField
+        if self.type == 'integer':
+            return wtforms.fields.IntegerField
+        return wtforms.fields.FloatField
+
+    @classmethod
+    def extract(cls, params: dict, available: str):
+        validators = []
+        attributes = {}
+        if {'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'} \
+           & available:
+            validators.append(NumberRange(
+                min=params.get('minimum', None),
+                max=params.get('maximum', None),
+                exclusive_min=params.get('exclusiveMinimum', None),
+                exclusive_max=params.get('exclusiveMaximum', None)
+            ))
+        if 'enum' in available:
+            attributes['choices'] = params['enum']
+        return validators, attributes
+
+
+@converter.register('boolean')
+class BooleanParameters(JSONFieldParameters):
+    supported = {'boolean'}
+
+    def get_factory(self):
+        if self.factory is not None:
+            return self.factory
+        return wtforms.fields.BooleanField
+
+
+@converter.register('array')
+class ArrayParameters(JSONFieldParameters):
+
+    supported = {'array'}
+    allowed = {'items', 'minItems', 'maxItems'}
+    subfield: Optional[JSONFieldParameters] = None
+
+    def __init__(self, type: str, name: str, required: bool,
+                 validators: List, attributes: Dict,
+                 subfield: Optional[JSONFieldParameters] = None):
+        self.type = type
+        self.name = name
+        self.required = required
+        self.validators = validators
+        self.subfield = subfield
+        self.attributes = attributes
+
+    def get_factory(self):
+        if self.factory is not None:
+            return self.factory
+        if self.subfield is None:
+            raise NotImplementedError(
+                "Unsupported array type : 'items' attribute required.")
+        return partial(wtforms.fields.FieldList, self.subfield())
+
+    @classmethod
+    def extract(cls, params: dict, available: str):
+        attributes = {}
+        if 'minItems' in available:
+            attributes['min_entries'] = params['minItems']
+        if 'maxItems' in available:
+            attributes['max_entries'] = params['maxItems']
+        return [], attributes
+
+    @classmethod
+    def from_json_field(cls, name: str, required: bool, params: dict):
+        available = set(params.keys())
+        if illegal := ((available - cls.ignore) - cls.allowed):
+            raise NotImplementedError(
+                f'Unsupported attributes for string type: {illegal}')
+
+        validators, options = cls.extract(params, available)
+        if 'items' in available:
+            items = params['items']
+            if '$refs' in items:
+                raise NotImplementedError(
+                    'References are not yet implemented.'
                 )
-        return factory, {**self.metadata, **options}
-
-    def __call__(self):
-        factory, options = self.cast()
-        return factory(**options)
+            else:
+                field = converter.lookup(items['type']).from_json_field(
+                    name, False, items)
+            return cls(
+                params['type'], name, required, validators, options, field)
+        return cls(params['type'], name, required, validators, options)
