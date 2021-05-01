@@ -12,4 +12,6 @@ WTForms out of JSONSchema
 Features
 --------
 
-* TODO
+* Add references resolution, both local and remote.
+* Add more tests
+* Refine the detection of potential widgets, like a multiselect with an array[string[enum]] situation.
