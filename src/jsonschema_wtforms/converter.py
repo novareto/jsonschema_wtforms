@@ -1,27 +1,38 @@
 import abc
 import wtforms.fields
 import wtforms.validators
-from typing import List, Dict, Literal, Type, ClassVar, Tuple, Optional
+from typing import List, Dict, Type, ClassVar, Tuple, Optional
 
 
 class JSONFieldParameters(abc.ABC):
-    type: str
-    name: str
-    validators: List
-    attributes: Dict
-    required: bool
-    factory: Optional[Type[wtforms.fields.Field]] = None
     supported: ClassVar[set]
     ignore: ClassVar[set] = frozenset(('type', 'title', 'description'))
     allowed: ClassVar[set] = frozenset()
 
-    def __init__(self, type: str, name: str, required: bool,
-                 validators: List, attributes: Dict):
+    type: str
+    name: str
+    label: str
+    description: str
+    validators: List
+    attributes: Dict
+    required: bool
+    factory: Optional[Type[wtforms.fields.Field]] = None
+
+    def __init__(self,
+                 type: str,
+                 name: str,
+                 required: bool,
+                 validators: List,
+                 attributes: Dict,
+                 label: str = '',
+                 description: str = ''):
         if type not in self.supported:
             raise TypeError(
                 f'{self.__class__} does not support the {type} type.')
         self.type = type
         self.name = name
+        self.label = label or name
+        self.description = description
         self.required = required
         self.validators = validators
         self.attributes = attributes
@@ -43,6 +54,10 @@ class JSONFieldParameters(abc.ABC):
         factory = self.get_factory()
         return factory(**options)
 
+    def bind(self, form, **options):
+        wtfield = self()
+        return wtfield.bind(form, **options)
+
     @classmethod
     def extract(cls, params: dict, available: str) -> Tuple[List, Dict]:
         return [], {}
@@ -51,11 +66,16 @@ class JSONFieldParameters(abc.ABC):
     def from_json_field(cls, name: str, required: bool, params: dict):
         available = set(params.keys())
         if illegal := ((available - cls.ignore) - cls.allowed):
-            raise NotImplementedError(
-                f'Unsupported attributes for string type: {illegal}')
+            raise NotImplementedError(f'Unsupported attributes: {illegal}.')
+        validators, attributes = cls.extract(params, available)
         return cls(
-            params['type'], name, required,
-            *cls.extract(params, available)
+            params['type'],
+            name,
+            required,
+            validators,
+            attributes,
+            label=params.get('label'),
+            description=params.get('description')
         )
 
 

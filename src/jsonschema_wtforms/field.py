@@ -1,9 +1,9 @@
 import re
+import wtforms.form
 import wtforms.fields
 import wtforms.fields.html5
 from functools import partial
-from typing import Tuple, Optional, Dict, List, Any, TypedDict, ClassVar, Type
-from jsonschema_wtforms._fields import MultiCheckboxField
+from typing import Optional, Dict, ClassVar, Type
 from jsonschema_wtforms.validators import NumberRange
 from jsonschema_wtforms.converter import JSONFieldParameters, converter
 
@@ -52,7 +52,7 @@ class StringParameters(JSONFieldParameters):
             attributes['choices'] = params['enum']
         if 'format' in available:
             format = attributes['format'] = params['format']
-            if not format in string_formats:
+            if format not in string_formats:
                 raise NotImplementedError(
                     f'String format not implemented: {format}.')
 
@@ -118,15 +118,9 @@ class ArrayParameters(JSONFieldParameters):
     allowed = {'items', 'minItems', 'maxItems'}
     subfield: Optional[JSONFieldParameters] = None
 
-    def __init__(self, type: str, name: str, required: bool,
-                 validators: List, attributes: Dict,
-                 subfield: Optional[JSONFieldParameters] = None):
-        self.type = type
-        self.name = name
-        self.required = required
-        self.validators = validators
+    def __init__(self, *args, subfield=None, **kwargs):
+        super().__init__(*args, **kwargs)
         self.subfield = subfield
-        self.attributes = attributes
 
     def get_factory(self):
         if self.factory is not None:
@@ -150,18 +144,90 @@ class ArrayParameters(JSONFieldParameters):
         available = set(params.keys())
         if illegal := ((available - cls.ignore) - cls.allowed):
             raise NotImplementedError(
-                f'Unsupported attributes for string type: {illegal}')
+                f'Unsupported attributes for array type: {illegal}')
 
-        validators, options = cls.extract(params, available)
+        subfield = None
+        validators, attributes = cls.extract(params, available)
         if 'items' in available:
             items = params['items']
             if '$refs' in items:
                 raise NotImplementedError(
-                    'References are not yet implemented.'
+                    "References can't be resolved as of yet."
                 )
             else:
-                field = converter.lookup(items['type']).from_json_field(
+                subfield = converter.lookup(items['type']).from_json_field(
                     name, False, items)
-            return cls(
-                params['type'], name, required, validators, options, field)
-        return cls(params['type'], name, required, validators, options)
+        return cls(
+            params['type'],
+            name,
+            required,
+            validators,
+            attributes,
+            subfield=subfield,
+            label=params.get('title'),
+            description=params.get('description')
+        )
+
+
+@converter.register('object')
+class ObjectParameters(JSONFieldParameters):
+
+    supported = {'object'}
+    allowed = {'required', 'properties'}
+    fields: Dict[str, JSONFieldParameters]
+    formclass: ClassVar[
+        Type[wtforms.form.BaseForm]
+    ] = wtforms.form.BaseForm
+
+    def __init__(self, fields, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields = fields
+
+    def get_factory(self):
+        if self.factory is not None:
+            return self.factory
+        form = self.formclass(self.fields)
+        return partial(wtforms.fields.FormField, form)
+
+    def get_options(self):
+        # Object-types do not need root validators.
+        # Validation is handled at field level.
+        return self.attributes
+
+    @classmethod
+    def from_json_field(cls, name: str, required: bool, params: dict):
+        available = set(params.keys())
+        if illegal := ((available - cls.ignore) - cls.allowed):
+            raise NotImplementedError(
+                f'Unsupported attributes for string type: {illegal}')
+
+        properties = params.get('properties', None)
+        if properties is None:
+            raise NotImplementedError("Missing properties.")
+
+        requirements = params.get('required', [])
+        fields = {}
+        for property_name, definition in params['properties'].items():
+            if (type := definition.get('type', None)) is not None:
+                field = converter.lookup(type)
+                fields[property_name] = field.from_json_field(
+                    property_name,
+                    property_name in requirements, definition)
+            else:
+                raise NotImplementedError(
+                    f'Undefined type for property {name}'
+                )
+        validators, attributes = cls.extract(params, available)
+        if validators:
+            raise NotImplementedError(
+                'Object-types can have root validators')
+        return cls(
+            fields,
+            params['type'],
+            name,
+            required,
+            validators,
+            attributes,
+            label=params.get('title'),
+            description=params.get('description')
+        )

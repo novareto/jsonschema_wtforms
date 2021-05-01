@@ -1,4 +1,3 @@
-import pytest
 import hamcrest
 import wtforms.form
 import wtforms.fields

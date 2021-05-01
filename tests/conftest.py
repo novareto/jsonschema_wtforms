@@ -5,42 +5,37 @@ import pathlib
 
 
 @pytest.fixture(scope="session")
-def product_schema():
-    file = pathlib.Path(request.node.fspath.strpath)
-    config = file.with_name('product.json')
-    with config.open() as fp:
+def product_schema(request):
+    path = pathlib.Path(__file__).parent / 'product.json'
+    with path.open('r') as fp:
         return json.load(fp)
 
 
 @pytest.fixture(scope="session")
-def person_schema():
-    file = pathlib.Path(request.node.fspath.strpath)
-    config = file.with_name('person.json')
-    with config.open() as fp:
+def person_schema(request):
+    path = pathlib.Path(__file__).parent / 'person.json'
+    with path.open('r') as fp:
         return json.load(fp)
 
 
 @pytest.fixture(scope="session")
-def address_schema():
-    file = pathlib.Path(request.node.fspath.strpath)
-    config = file.with_name('address.json')
-    with config.open() as fp:
+def address_schema(request):
+    path = pathlib.Path(__file__).parent / 'address.json'
+    with path.open('r') as fp:
         return json.load(fp)
 
 
 @pytest.fixture(scope="session")
-def geo_schema():
-    file = pathlib.Path(request.node.fspath.strpath)
-    config = file.with_name('geo.json')
-    with config.open() as fp:
+def geo_schema(request):
+    path = pathlib.Path(__file__).parent / 'geo.json'
+    with path.open('r') as fp:
         return json.load(fp)
 
 
 @pytest.fixture(scope="session")
-def refs_and_defs_schema():
-    file = pathlib.Path(request.node.fspath.strpath)
-    config = file.with_name('refs_defs.json')
-    with config.open() as fp:
+def refs_and_defs_schema(request):
+    path = pathlib.Path(__file__).parent / 'refs_defs.json'
+    with path.open('r') as fp:
         return json.load(fp)
 
 

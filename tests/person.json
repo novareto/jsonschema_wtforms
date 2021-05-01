@@ -1,6 +1,4 @@
 {
-    "$id": "https://example.com/person.schema.json",
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Person",
     "type": "object",
     "properties": {
@@ -18,5 +16,5 @@
             "minimum": 0
         }
     },
-    "required": ["firstName", "lastName"],
+    "required": ["firstName", "lastName"]
 }

@@ -3,7 +3,6 @@ import hamcrest
 import wtforms.form
 import wtforms.fields
 import wtforms.validators
-import jsonschema_wtforms.validators
 from jsonschema_wtforms.field import StringParameters
 
 
@@ -164,4 +163,4 @@ def test_unhandled_attribute():
         })
 
     assert str(exc.value) == (
-        "Unsupported attributes for string type: {'unknown'}")
+        "Unsupported attributes: {'unknown'}.")

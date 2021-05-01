@@ -1,9 +1,7 @@
 import pytest
-import hamcrest
 import wtforms.form
 import wtforms.fields
 import wtforms.validators
-import jsonschema_wtforms.validators
 from jsonschema_wtforms.field import ArrayParameters
 
 
