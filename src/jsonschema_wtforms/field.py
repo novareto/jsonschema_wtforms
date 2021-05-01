@@ -4,6 +4,7 @@ import wtforms.fields
 import wtforms.fields.html5
 from functools import partial
 from typing import Optional, Dict, ClassVar, Type
+from jsonschema_wtforms._fields import MultiCheckboxField
 from jsonschema_wtforms.validators import NumberRange
 from jsonschema_wtforms.converter import JSONFieldParameters, converter
 
@@ -49,7 +50,7 @@ class StringParameters(JSONFieldParameters):
                 re.compile(params['pattern'])
             ))
         if 'enum' in available:
-            attributes['choices'] = params['enum']
+            attributes['choices'] = [(v, v) for v in params['enum']]
         if 'format' in available:
             format = attributes['format'] = params['format']
             if format not in string_formats:
@@ -97,7 +98,7 @@ class NumberParameters(JSONFieldParameters):
                 exclusive_max=params.get('exclusiveMaximum', None)
             ))
         if 'enum' in available:
-            attributes['choices'] = params['enum']
+            attributes['choices'] = [(v, v) for v in params['enum']]
         return validators, attributes
 
 
@@ -115,7 +116,7 @@ class BooleanParameters(JSONFieldParameters):
 class ArrayParameters(JSONFieldParameters):
 
     supported = {'array'}
-    allowed = {'items', 'minItems', 'maxItems'}
+    allowed = {'enum', 'items', 'minItems', 'maxItems'}
     subfield: Optional[JSONFieldParameters] = None
 
     def __init__(self, *args, subfield=None, **kwargs):
@@ -125,6 +126,8 @@ class ArrayParameters(JSONFieldParameters):
     def get_factory(self):
         if self.factory is not None:
             return self.factory
+        if 'choices' in self.attributes:
+            return MultiCheckboxField
         if self.subfield is None:
             raise NotImplementedError(
                 "Unsupported array type : 'items' attribute required.")
@@ -148,6 +151,9 @@ class ArrayParameters(JSONFieldParameters):
 
         subfield = None
         validators, attributes = cls.extract(params, available)
+        if 'enum' in available:
+            attributes['choices'] = [(v, v) for v in params['enum']]
+
         if 'items' in available:
             items = params['items']
             if '$refs' in items:

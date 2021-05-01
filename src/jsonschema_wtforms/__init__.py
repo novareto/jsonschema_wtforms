@@ -9,7 +9,7 @@ JSONSchema = Dict
 def schema_fields(schema: JSONSchema,
                   include: Optional[Iterable[str]] = None,
                   exclude: Optional[Iterable[str]] = None) -> dict:
-    root = ObjectParameters(None, False, schema)
+    root = ObjectParameters.from_json_field(None, False, schema)
     if not include:
         include = frozenset(root.fields.keys())
     if not exclude:

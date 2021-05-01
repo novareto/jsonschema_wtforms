@@ -6,7 +6,9 @@ from typing import List, Dict, Type, ClassVar, Tuple, Optional
 
 class JSONFieldParameters(abc.ABC):
     supported: ClassVar[set]
-    ignore: ClassVar[set] = frozenset(('type', 'title', 'description'))
+    ignore: ClassVar[set] = frozenset((
+        'name', 'type', 'title', 'description'
+    ))
     allowed: ClassVar[set] = frozenset()
 
     type: str
