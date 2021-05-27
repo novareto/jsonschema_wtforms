@@ -190,9 +190,7 @@ class ObjectParameters(JSONFieldParameters):
     supported = {'object'}
     allowed = {'required', 'properties', 'definitions'}
     fields: Dict[str, JSONFieldParameters]
-    formclass: ClassVar[
-        Type[wtforms.form.BaseForm]
-    ] = wtforms.form.BaseForm
+    formclass: ClassVar[Type[wtforms.form.Form]] = wtforms.form.Form
 
     def __init__(self, fields, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -201,8 +199,13 @@ class ObjectParameters(JSONFieldParameters):
     def get_factory(self):
         if self.factory is not None:
             return self.factory
-        form = self.formclass(self.fields)
-        return partial(wtforms.fields.FormField, form)
+        # We have to do that because wtforms doesn't want a BaseForm
+        # as a form in the FormField
+        formbase = type(
+            self.name, (self.formclass,),
+            {name: field() for name, field in self.fields.items()}
+        )
+        return partial(wtforms.fields.FormField, formbase)
 
     def get_options(self):
         # Object-types do not need root validators.
