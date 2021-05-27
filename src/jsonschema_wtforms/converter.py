@@ -6,10 +6,8 @@ from typing import List, Dict, Type, ClassVar, Tuple, Optional
 
 class JSONFieldParameters(abc.ABC):
     supported: ClassVar[set]
-    ignore: ClassVar[set] = frozenset((
-        'name', 'type', 'title', 'description'
-    ))
-    allowed: ClassVar[set] = frozenset()
+    ignore: ClassVar[set] = {'name', 'type', 'title', 'description'}
+    allowed: ClassVar[set] = frozenset(('default',))
 
     type: str
     name: str
@@ -58,7 +56,11 @@ class JSONFieldParameters(abc.ABC):
 
     def bind(self, form, **options):
         wtfield = self()
-        return wtfield.bind(form, **options)
+        try:
+            return wtfield.bind(form, **options)
+        except:
+            import pdb
+            pdb.set_trace()
 
     @classmethod
     def extract(cls, params: dict, available: str) -> Tuple[List, Dict]:
@@ -68,7 +70,8 @@ class JSONFieldParameters(abc.ABC):
     def from_json_field(cls, name: str, required: bool, params: dict):
         available = set(params.keys())
         if illegal := ((available - cls.ignore) - cls.allowed):
-            raise NotImplementedError(f'Unsupported attributes: {illegal}.')
+            raise NotImplementedError(
+                f'Unsupported attributes: {illegal} for {cls}.')
         validators, attributes = cls.extract(params, available)
         return cls(
             params['type'],

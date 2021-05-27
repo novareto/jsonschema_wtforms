@@ -3,7 +3,7 @@ import wtforms.form
 import wtforms.fields
 import wtforms.fields.html5
 from functools import partial
-from typing import Optional, Dict, ClassVar, Type
+from typing import Optional, Dict, ClassVar, Type, Iterable
 from jsonschema_wtforms._fields import MultiCheckboxField
 from jsonschema_wtforms.validators import NumberRange
 from jsonschema_wtforms.converter import JSONFieldParameters, converter
@@ -11,6 +11,7 @@ from jsonschema_wtforms.converter import JSONFieldParameters, converter
 
 string_formats = {
     'default': wtforms.fields.StringField,
+    'password': wtforms.fields.PasswordField,
     'date': wtforms.fields.html5.DateField,
     'time': wtforms.fields.html5.TimeField,
     'date-time': wtforms.fields.html5.DateTimeField,
@@ -25,16 +26,20 @@ class StringParameters(JSONFieldParameters):
 
     supported = {'string'}
     allowed = {
-        'format', 'pattern', 'enum', 'minLength', 'maxLength'
+        'format', 'pattern', 'enum', 'minLength', 'maxLength',
+        'writeOnly', 'default'
     }
+
+    def __init__(self, type, name, required, validators, attributes, **kwargs):
+        self.format = attributes.pop('format', 'default')
+        super().__init__(type, name, required, validators, attributes, **kwargs)
 
     def get_factory(self):
         if self.factory is not None:
             return self.factory
         if 'choices' in self.attributes:
             return wtforms.fields.SelectField
-        format = self.attributes.get('format', 'default')
-        return string_formats[format]
+        return string_formats[self.format]
 
     @classmethod
     def extract(cls, params: dict, available: str):
@@ -56,13 +61,13 @@ class StringParameters(JSONFieldParameters):
             if format not in string_formats:
                 raise NotImplementedError(
                     f'String format not implemented: {format}.')
-
             if format == 'ipv4':
                 validators.append(wtforms.validators.IPAddress(
                     ipv4=True, ipv6=False))
             if format == 'ipv6':
                 validators.append(wtforms.validators.IPAddress(
                     ipv4=False, ipv6=True))
+
         return validators, attributes
 
 
@@ -72,7 +77,7 @@ class NumberParameters(JSONFieldParameters):
 
     supported = {'integer', 'number'}
     allowed = {
-        'enum',
+        'enum', 'format',
         'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'
     }
 
@@ -116,7 +121,7 @@ class BooleanParameters(JSONFieldParameters):
 class ArrayParameters(JSONFieldParameters):
 
     supported = {'array'}
-    allowed = {'enum', 'items', 'minItems', 'maxItems'}
+    allowed = {'enum', 'items', 'minItems', 'maxItems', 'default'}
     subfield: Optional[JSONFieldParameters] = None
 
     def __init__(self, *args, subfield=None, **kwargs):
@@ -161,8 +166,11 @@ class ArrayParameters(JSONFieldParameters):
                     "References can't be resolved as of yet."
                 )
             else:
-                subfield = converter.lookup(items['type']).from_json_field(
-                    name, False, items)
+                if items:
+                    subfield = converter.lookup(items['type']).from_json_field(
+                        name, False, items)
+                else:
+                    subfield = None
         return cls(
             params['type'],
             name,
@@ -178,8 +186,9 @@ class ArrayParameters(JSONFieldParameters):
 @converter.register('object')
 class ObjectParameters(JSONFieldParameters):
 
+    ignore = JSONFieldParameters.ignore | {'id', '$schema', '$comment'}
     supported = {'object'}
-    allowed = {'required', 'properties'}
+    allowed = {'required', 'properties', 'definitions'}
     fields: Dict[str, JSONFieldParameters]
     formclass: ClassVar[
         Type[wtforms.form.BaseForm]
@@ -201,7 +210,11 @@ class ObjectParameters(JSONFieldParameters):
         return self.attributes
 
     @classmethod
-    def from_json_field(cls, name: str, required: bool, params: dict):
+    def from_json_field(
+            cls, name: str, required: bool, params: dict,
+            include: Optional[Iterable] = None,
+            exclude: Optional[Iterable] = None
+    ):
         available = set(params.keys())
         if illegal := ((available - cls.ignore) - cls.allowed):
             raise NotImplementedError(
@@ -211,9 +224,18 @@ class ObjectParameters(JSONFieldParameters):
         if properties is None:
             raise NotImplementedError("Missing properties.")
 
+        if include is None:
+            include = set(properties.keys())
+        else:
+            include = set(include)  # idempotent
+        if exclude is not None:
+            include = include - set(exclude)
+
         requirements = params.get('required', [])
         fields = {}
-        for property_name, definition in params['properties'].items():
+        for property_name, definition in properties.items():
+            if property_name not in include:
+                continue
             if (type := definition.get('type', None)) is not None:
                 field = converter.lookup(type)
                 fields[property_name] = field.from_json_field(
@@ -221,7 +243,7 @@ class ObjectParameters(JSONFieldParameters):
                     property_name in requirements, definition)
             else:
                 raise NotImplementedError(
-                    f'Undefined type for property {name}'
+                    f'Undefined type for property {property_name}'
                 )
         validators, attributes = cls.extract(params, available)
         if validators:
