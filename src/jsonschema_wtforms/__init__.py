@@ -6,6 +6,15 @@ from typing import Dict, Iterable, Optional
 JSONSchema = Dict
 
 
+def schema_fields(schema: JSONSchema,
+                  include: Optional[Iterable[str]] = None,
+                  exclude: Optional[Iterable[str]] = None):
+    root = ObjectParameters.from_json_field(
+        None, False, schema,
+        include=include, exclude=exclude)
+    return root.fields
+
+
 class Form(wtforms.form.BaseForm):
 
     def __init__(self, *args, **kwargs):
@@ -16,9 +25,5 @@ class Form(wtforms.form.BaseForm):
     def from_schema(
             cls, schema: JSONSchema,
             include: Optional[Iterable[str]] = None,
-            exclude: Optional[Iterable[str]] = None
-    ):
-        root = ObjectParameters.from_json_field(
-            None, False, schema,
-            include=include, exclude=exclude)
-        return cls(root.fields)
+            exclude: Optional[Iterable[str]] = None):
+        return cls(schema_fields(schema, include, exclude))
