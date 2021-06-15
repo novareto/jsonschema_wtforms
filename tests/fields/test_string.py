@@ -74,6 +74,23 @@ def test_IP_format():
     }))
 
 
+def test_binary():
+    field = StringParameters.from_json_field('test', True, {
+        "type": "string",
+        "format": "binary",
+        "contentMediaType": [
+            ".pdf",
+            "image/png"
+        ]
+    })
+    assert field.get_factory() == wtforms.fields.simple.FileField
+    form = wtforms.form.BaseForm({"test": field()})
+    assert form._fields['test']() == (
+        '<input accept=".pdf|image/png" id="test" name="test" '
+        'required type="file">'
+    )
+
+
 def test_length():
     field = StringParameters.from_json_field('test', True, {
         "type": "string",
@@ -163,4 +180,6 @@ def test_unhandled_attribute():
         })
 
     assert str(exc.value) == (
-        "Unsupported attributes: {'unknown'}.")
+        "Unsupported attributes: {'unknown'} for "
+        "<class 'jsonschema_wtforms.field.StringParameters'>."
+    )

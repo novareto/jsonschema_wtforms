@@ -17,7 +17,8 @@ string_formats = {
     'date-time': wtforms.fields.html5.DateTimeField,
     'email': wtforms.fields.html5.EmailField,
     'ipv4': wtforms.fields.StringField,
-    'ipv6': wtforms.fields.StringField
+    'ipv6': wtforms.fields.StringField,
+    'binary': wtforms.fields.FileField,
 }
 
 
@@ -27,7 +28,7 @@ class StringParameters(JSONFieldParameters):
     supported = {'string'}
     allowed = {
         'format', 'pattern', 'enum', 'minLength', 'maxLength',
-        'writeOnly', 'default'
+        'writeOnly', 'default', 'contentMediaType', 'contentEncoding'
     }
 
     def __init__(self, type, name, required, validators, attributes, **kwargs):
@@ -67,6 +68,14 @@ class StringParameters(JSONFieldParameters):
             if format == 'ipv6':
                 validators.append(wtforms.validators.IPAddress(
                     ipv4=False, ipv6=True))
+            if format == 'binary':
+                if 'contentMediaType' in available:
+                    ctype = params['contentMediaType']
+                    if isinstance(ctype, (list, tuple, set)):
+                        ctype = '|'.join(ctype)
+                    kw = attributes.get('render_kw', {})
+                    kw['accept'] = ctype
+                    attributes['render_kw'] = kw
 
         return validators, attributes
 
@@ -133,7 +142,12 @@ class ArrayParameters(JSONFieldParameters):
             return self.factory
         if 'choices' in self.attributes:
             return MultiCheckboxField
-        if self.subfield is None:
+        if isinstance(self.subfield, StringParameters):
+            if self.subfield.format == 'binary':
+                return partial(
+                    wtforms.fields.MultipleFileField,
+                    **self.subfield.attributes)
+        elif self.subfield is None:
             raise NotImplementedError(
                 "Unsupported array type : 'items' attribute required.")
         return partial(wtforms.fields.FieldList, self.subfield())
@@ -161,16 +175,11 @@ class ArrayParameters(JSONFieldParameters):
 
         if 'items' in available:
             items = params['items']
-            if '$refs' in items:
-                raise NotImplementedError(
-                    "References can't be resolved as of yet."
-                )
+            if items:
+                subfield = converter.lookup(items['type']).from_json_field(
+                    name, False, items)
             else:
-                if items:
-                    subfield = converter.lookup(items['type']).from_json_field(
-                        name, False, items)
-                else:
-                    subfield = None
+                subfield = None
         return cls(
             params['type'],
             name,

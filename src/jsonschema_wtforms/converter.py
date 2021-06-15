@@ -56,11 +56,7 @@ class JSONFieldParameters(abc.ABC):
 
     def bind(self, form, **options):
         wtfield = self()
-        try:
-            return wtfield.bind(form, **options)
-        except:
-            import pdb
-            pdb.set_trace()
+        return wtfield.bind(form, **options)
 
     @classmethod
     def extract(cls, params: dict, available: str) -> Tuple[List, Dict]:
