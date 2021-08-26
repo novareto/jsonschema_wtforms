@@ -195,7 +195,9 @@ class ArrayParameters(JSONFieldParameters):
 @converter.register('object')
 class ObjectParameters(JSONFieldParameters):
 
-    ignore = JSONFieldParameters.ignore | {'id', '$schema', '$comment'}
+    ignore = JSONFieldParameters.ignore | {
+        '$id', 'id', '$schema', '$comment'
+    }
     supported = {'object'}
     allowed = {'required', 'properties', 'definitions'}
     fields: Dict[str, JSONFieldParameters]

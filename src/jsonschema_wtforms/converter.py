@@ -39,6 +39,8 @@ class JSONFieldParameters(abc.ABC):
 
     def get_options(self):
         return {
+            'label': self.label,
+            'description': self.description,
             'validators': [
                 wtforms.validators.DataRequired() if self.required else
                 wtforms.validators.Optional(), *self.validators
@@ -75,7 +77,7 @@ class JSONFieldParameters(abc.ABC):
             required,
             validators,
             attributes,
-            label=params.get('label'),
+            label=params.get('title'),
             description=params.get('description')
         )
 
