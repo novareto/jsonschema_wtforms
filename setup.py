@@ -41,6 +41,6 @@ setup(
         'test': test_requires,
     },
     url='https://github.com/Novareto/jsonschema_wtforms',
-    version='0.1.0',
+    version='0.9',
     zip_safe=False,
 )
