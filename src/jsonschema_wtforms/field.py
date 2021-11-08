@@ -1,7 +1,6 @@
 import re
 import wtforms.form
 import wtforms.fields
-import wtforms.fields.html5
 from functools import partial
 from typing import Optional, Dict, ClassVar, Type, Iterable
 from jsonschema_wtforms._fields import MultiCheckboxField
@@ -12,10 +11,10 @@ from jsonschema_wtforms.converter import JSONFieldParameters, converter
 string_formats = {
     'default': wtforms.fields.StringField,
     'password': wtforms.fields.PasswordField,
-    'date': wtforms.fields.html5.DateField,
-    'time': wtforms.fields.html5.TimeField,
-    'date-time': wtforms.fields.html5.DateTimeField,
-    'email': wtforms.fields.html5.EmailField,
+    'date': wtforms.fields.DateField,
+    'time': wtforms.fields.TimeField,
+    'date-time': wtforms.fields.DateTimeField,
+    'email': wtforms.fields.EmailField,
     'ipv4': wtforms.fields.StringField,
     'ipv6': wtforms.fields.StringField,
     'binary': wtforms.fields.FileField,

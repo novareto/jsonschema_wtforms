@@ -33,11 +33,11 @@ def test_standalone_schema(person_schema):
     form = wtforms.form.BaseForm(schema.fields)
     hamcrest.assert_that(form._fields, hamcrest.has_entries({
         "firstName": hamcrest.instance_of(
-            wtforms.fields.core.StringField),
+            wtforms.fields.StringField),
         "lastName": hamcrest.instance_of(
-            wtforms.fields.core.StringField),
+            wtforms.fields.StringField),
         "age": hamcrest.instance_of(
-            wtforms.fields.core.IntegerField),
+            wtforms.fields.IntegerField),
     }))
 
 
@@ -53,9 +53,9 @@ def test_schema_as_field(person_schema):
     form = wtforms.form.BaseForm(schema.fields)
     hamcrest.assert_that(form._fields, hamcrest.has_entries({
         "firstName": hamcrest.instance_of(
-            wtforms.fields.core.StringField),
+            wtforms.fields.StringField),
         "lastName": hamcrest.instance_of(
-            wtforms.fields.core.StringField),
+            wtforms.fields.StringField),
         "age": hamcrest.instance_of(
-            wtforms.fields.core.IntegerField),
+            wtforms.fields.IntegerField),
     }))

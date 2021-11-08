@@ -70,7 +70,7 @@ def test_complex_array():
     factory = field.get_factory()
     assert factory.func == wtforms.fields.FieldList
     subfield = factory.args[0].field_class
-    assert subfield == wtforms.fields.core.FieldList
+    assert subfield == wtforms.fields.FieldList
     subsubfield = factory.args[0].args[0].field_class
     assert subsubfield == wtforms.fields.FloatField
 

@@ -19,7 +19,7 @@ def test_email_format():
         "type": "string",
         "format": "email"
     })
-    assert field.get_factory() == wtforms.fields.html5.EmailField
+    assert field.get_factory() == wtforms.fields.EmailField
 
 
 def test_date_format():
@@ -27,7 +27,7 @@ def test_date_format():
         "type": "string",
         "format": "date"
     })
-    assert field.get_factory() == wtforms.fields.html5.DateField
+    assert field.get_factory() == wtforms.fields.DateField
 
 
 def test_time_format():
@@ -35,7 +35,7 @@ def test_time_format():
         "type": "string",
         "format": "time"
     })
-    assert field.get_factory() == wtforms.fields.html5.TimeField
+    assert field.get_factory() == wtforms.fields.TimeField
 
 
 def test_datetime_format():
@@ -43,7 +43,7 @@ def test_datetime_format():
         "type": "string",
         "format": "date-time"
     })
-    assert field.get_factory() == wtforms.fields.html5.DateTimeField
+    assert field.get_factory() == wtforms.fields.DateTimeField
 
 
 def test_IP_format():
@@ -160,11 +160,11 @@ def test_enum():
     }))
 
     assert field.required is True
-    assert field.get_factory() == wtforms.fields.core.SelectField
+    assert field.get_factory() == wtforms.fields.SelectField
     form = wtforms.form.BaseForm({"test": field()})
     form.process(data={'test': 'Dagger'})
     assert form.validate() is False
-    assert form.errors == {'test': ['Not a valid choice']}
+    assert form.errors == {'test': ['Not a valid choice.']}
 
     form.process(data={'test': 'foo'})
     assert form.validate() is True

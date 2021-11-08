@@ -21,7 +21,7 @@ def test_max():
     }))
 
     assert field.required is True
-    assert field.get_factory() == wtforms.fields.core.IntegerField
+    assert field.get_factory() == wtforms.fields.IntegerField
     form = wtforms.form.BaseForm({"test": field()})
     form.process(data={'test': 21})
     assert form.validate() is False
@@ -112,7 +112,7 @@ def test_enum():
     form = wtforms.form.BaseForm({"test": field()})
     form.process(data={'test': 9})
     assert form.validate() is False
-    assert form.errors == {'test': ['Not a valid choice']}
+    assert form.errors == {'test': ['Not a valid choice.']}
 
     form.process(data={'test': 1})
     assert form.validate() is True
