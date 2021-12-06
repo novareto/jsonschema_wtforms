@@ -2,7 +2,7 @@
 History
 =======
 
-0.10 (unreleased)
+0.10 (2021-12-06)
 -----------------
 
 - Nothing changed yet.
