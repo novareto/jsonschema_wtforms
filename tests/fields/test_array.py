@@ -75,6 +75,39 @@ def test_complex_array():
     assert subsubfield == wtforms.fields.FloatField
 
 
+def test_complex_array_of_objects():
+
+    field = ArrayParameters.from_json_field('test', True, {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "creation-date": {
+                    "type": "string",
+                    "format": "date"
+                },
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": [
+                            ".pdf",
+                            ".jpg",
+                            ".png"
+                        ]
+                    }
+                }
+            }
+        }
+    })
+
+    factory = field.get_factory()
+    assert factory.func == wtforms.fields.FieldList
+    subfield = factory.args[0].field_class
+    assert subfield == wtforms.fields.FormField
+
+
 def test_files_array():
     field = ArrayParameters.from_json_field('test', True, {
         "type": "array",
