@@ -42,7 +42,7 @@ class StringParameters(JSONFieldParameters):
         return string_formats[self.format]
 
     @classmethod
-    def extract(cls, params: dict, available: str):
+    def extract(cls, params: dict, available: set):
         validators = []
         attributes = {}
         if {'minLength', 'maxLength'} & available:
@@ -99,7 +99,7 @@ class NumberParameters(JSONFieldParameters):
         return wtforms.fields.FloatField
 
     @classmethod
-    def extract(cls, params: dict, available: str):
+    def extract(cls, params: dict, available: set):
         validators = []
         attributes = {}
         if {'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'} \
@@ -152,7 +152,7 @@ class ArrayParameters(JSONFieldParameters):
         return partial(wtforms.fields.FieldList, self.subfield())
 
     @classmethod
-    def extract(cls, params: dict, available: str):
+    def extract(cls, params: dict, available: set):
         attributes = {}
         if 'minItems' in available:
             attributes['min_entries'] = params['minItems']
@@ -200,7 +200,7 @@ class ObjectParameters(JSONFieldParameters):
     supported = {'object'}
     allowed = {'required', 'properties', 'definitions'}
     fields: Dict[str, JSONFieldParameters]
-    formclass: ClassVar[Type[wtforms.form.Form]] = wtforms.form.Form
+    formclass: ClassVar[Type[wtforms.Form]] = wtforms.Form
 
     def __init__(self, fields, *args, **kwargs):
         super().__init__(*args, **kwargs)

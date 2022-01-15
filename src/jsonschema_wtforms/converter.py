@@ -61,7 +61,7 @@ class JSONFieldParameters(abc.ABC):
         return wtfield.bind(form, **options)
 
     @classmethod
-    def extract(cls, params: dict, available: str) -> Tuple[List, Dict]:
+    def extract(cls, params: dict, available: set) -> Tuple[List, Dict]:
         return [], {}
 
     @classmethod
