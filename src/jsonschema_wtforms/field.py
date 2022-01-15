@@ -261,7 +261,7 @@ class ObjectParameters(JSONFieldParameters):
         validators, attributes = cls.extract(params, available)
         if validators:
             raise NotImplementedError(
-                'Object-types can have root validators')
+                "Object-types can't have root validators")
         return cls(
             fields,
             params['type'],
