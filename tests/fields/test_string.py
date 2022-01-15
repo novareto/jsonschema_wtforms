@@ -62,6 +62,22 @@ def test_uri_format():
     )
 
 
+def test_password_format():
+    field = StringParameters.from_json_field('test', True, {
+        "title": "Password",
+        "type": "string",
+        "writeOnly": True,
+        "format": "password"
+    })
+    assert field.get_factory() == wtforms.fields.PasswordField
+    form = wtforms.form.BaseForm({"test": field()})
+    form.process()
+    assert form._fields['test']() == (
+        '<input id="test" '
+        'name="test" required type="password" value="">'
+    )
+
+
 def test_IP_format():
     field = StringParameters.from_json_field('test', True, {
         "type": "string",
