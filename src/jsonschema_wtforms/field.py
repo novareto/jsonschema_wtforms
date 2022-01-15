@@ -71,7 +71,7 @@ class StringParameters(JSONFieldParameters):
                 if 'contentMediaType' in available:
                     ctype = params['contentMediaType']
                     if isinstance(ctype, (list, tuple, set)):
-                        ctype = ','.join(ctype)
+                        ctype = '|'.join(ctype)
                     kw = attributes.get('render_kw', {})
                     kw['accept'] = ctype
                     attributes['render_kw'] = kw
