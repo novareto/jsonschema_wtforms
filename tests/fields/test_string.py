@@ -46,6 +46,22 @@ def test_datetime_format():
     assert field.get_factory() == wtforms.fields.DateTimeField
 
 
+def test_uri_format():
+    field = StringParameters.from_json_field('test', True, {
+        "minLength": 1,
+        "maxLength": 2083,
+        "format": "uri",
+        "type": "string"
+    })
+    assert field.get_factory() == wtforms.fields.URLField
+    form = wtforms.form.BaseForm({"test": field()})
+    form.process()
+    assert form._fields['test']() == (
+        '<input id="test" maxlength="2083" minlength="1" '
+        'name="test" required type="url" value="">'
+    )
+
+
 def test_IP_format():
     field = StringParameters.from_json_field('test', True, {
         "type": "string",

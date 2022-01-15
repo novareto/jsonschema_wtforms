@@ -14,6 +14,14 @@
             "description": "Age in years which must be equal to or greater than zero.",
             "type": "integer",
             "minimum": 0
+        },
+        "homepage": {
+            "title": "Homepage",
+            "default": "https://myhomepage.org",
+            "minLength": 1,
+            "maxLength": 2083,
+            "format": "uri",
+            "type": "string"
         }
     },
     "required": ["firstName", "lastName"]

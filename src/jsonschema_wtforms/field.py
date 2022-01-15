@@ -18,6 +18,7 @@ string_formats = {
     'ipv4': wtforms.fields.StringField,
     'ipv6': wtforms.fields.StringField,
     'binary': wtforms.fields.FileField,
+    'uri': wtforms.fields.URLField
 }
 
 

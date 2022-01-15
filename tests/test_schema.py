@@ -23,6 +23,9 @@ def test_standalone_schema(person_schema):
             jsonschema_wtforms.field.StringParameters),
         "age": hamcrest.instance_of(
             jsonschema_wtforms.field.NumberParameters),
+        "homepage": hamcrest.instance_of(
+            jsonschema_wtforms.field.StringParameters
+        )
     }))
 
     assert schema.fields["firstName"].required is True
