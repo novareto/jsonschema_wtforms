@@ -2,6 +2,8 @@
 History
 =======
 
+- Add support for local references in object and array types [ponym]
+
 0.10 (unreleased)
 -----------------
 

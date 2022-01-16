@@ -130,7 +130,7 @@ class BooleanParameters(JSONFieldParameters):
 class ArrayParameters(JSONFieldParameters):
 
     supported = {'array'}
-    allowed = {'enum', 'items', 'minItems', 'maxItems', 'default'}
+    allowed = {'enum', 'items', 'minItems', 'maxItems', 'default', 'definitions'}
     subfield: Optional[JSONFieldParameters] = None
 
     def __init__(self, *args, subfield=None, **kwargs):
@@ -168,18 +168,20 @@ class ArrayParameters(JSONFieldParameters):
             raise NotImplementedError(
                 f'Unsupported attributes for array type: {illegal}')
 
-        subfield = None
         validators, attributes = cls.extract(params, available)
         if 'enum' in available:
             attributes['choices'] = [(v, v) for v in params['enum']]
 
-        if 'items' in available:
-            items = params['items']
-            if items:
-                subfield = converter.lookup(items['type']).from_json_field(
-                    name, False, items)
-            else:
-                subfield = None
+        if 'items' in available and (items := params['items']):
+            if ref := items.get('$ref'):
+                definitions = params.get('definitions', {})
+                assert definitions, 'Missing definitions.'
+                items = definitions[ref.split('/')[-1]]
+            subfield = converter.lookup(items['type']).from_json_field(
+                name, False, items
+            )
+        else:
+            subfield = None
         return cls(
             params['type'],
             name,
@@ -247,14 +249,22 @@ class ObjectParameters(JSONFieldParameters):
 
         requirements = params.get('required', [])
         fields = {}
+        definitions = params.get('definitions', {})
         for property_name, definition in properties.items():
             if property_name not in include:
                 continue
-            if (type := definition.get('type', None)) is not None:
-                field = converter.lookup(type)
+            if ref := definition.get('$ref'):
+                if not definitions:
+                    raise NotImplementedError('Missing definitions.')
+                definition = definitions[ref.split('/')[-1]]
+            if type_ := definition.get('type', None):
+                field = converter.lookup(type_)
+                if 'definitions' in field.allowed:
+                    definition['definitions'] = definitions
                 fields[property_name] = field.from_json_field(
                     property_name,
-                    property_name in requirements, definition)
+                    property_name in requirements, definition
+                )
             else:
                 raise NotImplementedError(
                     f'Undefined type for property {property_name}'

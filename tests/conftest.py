@@ -1,7 +1,14 @@
 import json
+from functools import lru_cache
+
 import wtforms.form
 import pytest
 import pathlib
+
+
+@lru_cache()
+def load_file(name):
+    return json.loads((pathlib.Path(__file__).parent / name).read_text())
 
 
 @pytest.fixture(scope="session")
@@ -30,6 +37,11 @@ def geo_schema(request):
     path = pathlib.Path(__file__).parent / 'geo.json'
     with path.open('r') as fp:
         return json.load(fp)
+
+
+@pytest.fixture(scope="session")
+def user_address_schema():
+    return load_file('user_address.json')
 
 
 @pytest.fixture(scope="session")

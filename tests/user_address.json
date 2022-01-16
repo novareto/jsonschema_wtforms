@@ -1,0 +1,42 @@
+{
+    "title": "TestUser",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "type": "string"
+        },
+        "address": {
+            "$ref": "#/definitions/Address"
+        }
+    },
+    "required": [
+        "name",
+        "address"
+    ],
+    "definitions": {
+        "Address": {
+            "title": "Address",
+            "type": "object",
+            "properties": {
+                "street": {
+                    "title": "Street",
+                    "type": "string"
+                },
+                "city": {
+                    "title": "City",
+                    "type": "string"
+                },
+                "phone": {
+                    "title": "Phone",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "street",
+                "city",
+                "phone"
+            ]
+        }
+    }
+}
