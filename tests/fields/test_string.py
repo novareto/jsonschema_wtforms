@@ -155,7 +155,8 @@ def test_length():
 def test_pattern():
     field = StringParameters.from_json_field('test', True, {
         "type": "string",
-        "pattern": "^The"
+        "pattern": "^The",
+        "default": "The "
     })
 
     constraints = field.get_options()
@@ -167,6 +168,7 @@ def test_pattern():
     }))
 
     assert field.required is True
+    assert field.attributes['default']
     assert field.get_factory() == wtforms.fields.StringField
     form = wtforms.form.BaseForm({"test": field()})
     form.process(data={'test': 'Dagger'})
@@ -176,6 +178,10 @@ def test_pattern():
     form.process(data={'test': 'The dagger'})
     assert form.validate() is True
     assert not form.errors
+    form.process()
+    assert form._fields['test']() == (
+        '<input id="test" name="test" required type="text" value="The ">'
+    )
 
 
 def test_enum():

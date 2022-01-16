@@ -46,6 +46,7 @@ def test_min():
         )
     }))
     assert field.required is True
+    assert field.attributes['default']
     assert field.get_factory() == wtforms.fields.FloatField
     form = wtforms.form.BaseForm({"test": field()})
     form.process(data={'test': 2.10})

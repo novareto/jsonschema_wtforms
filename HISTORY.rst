@@ -3,6 +3,7 @@ History
 =======
 
 - Add support for local references in object and array types [ponym]
+- Add support for default values [ponym]
 
 0.10 (unreleased)
 -----------------

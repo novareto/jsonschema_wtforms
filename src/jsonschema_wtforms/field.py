@@ -51,6 +51,8 @@ class StringParameters(JSONFieldParameters):
                 min=params.get('minLength', -1),
                 max=params.get('maxLength', -1)
             ))
+        if 'default' in available:
+            attributes['default'] = params.get('default')
         if 'pattern' in available:
             validators.append(wtforms.validators.Regexp(
                 re.compile(params['pattern'])
@@ -104,6 +106,8 @@ class NumberParameters(JSONFieldParameters):
     def extract(cls, params: dict, available: set):
         validators = []
         attributes = {}
+        if default := params.get('default'):
+            attributes['default'] = default
         if {'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'} \
            & available:
             validators.append(NumberRange(
@@ -120,6 +124,12 @@ class NumberParameters(JSONFieldParameters):
 @converter.register('boolean')
 class BooleanParameters(JSONFieldParameters):
     supported = {'boolean'}
+
+    @classmethod
+    def extract(cls, params: dict, available: set):
+        if 'default' in available:
+            return [], {'default': params['default']}
+        return [], {}
 
     def get_factory(self):
         if self.factory is not None:
@@ -160,6 +170,8 @@ class ArrayParameters(JSONFieldParameters):
             attributes['min_entries'] = params['minItems']
         if 'maxItems' in available:
             attributes['max_entries'] = params['maxItems']
+        if 'default' in available:
+            attributes['default'] = params['default']
         return [], attributes
 
     @classmethod
