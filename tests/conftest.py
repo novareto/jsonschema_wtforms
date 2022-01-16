@@ -40,11 +40,6 @@ def geo_schema(request):
 
 
 @pytest.fixture(scope="session")
-def user_address_schema():
-    return load_file('user_address.json')
-
-
-@pytest.fixture(scope="session")
 def refs_and_defs_schema(request):
     path = pathlib.Path(__file__).parent / 'refs_defs.json'
     with path.open('r') as fp:
