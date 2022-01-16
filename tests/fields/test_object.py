@@ -2,7 +2,6 @@ import pytest
 import wtforms.form
 import wtforms.fields
 import wtforms.validators
-from wtforms import FormField
 
 from jsonschema_wtforms.field import ObjectParameters
 
@@ -28,7 +27,6 @@ def test_object():
 
     factory = field.get_factory()
     assert factory.func == wtforms.fields.FormField
-    assert False
 
 
 def test_ref_object():
