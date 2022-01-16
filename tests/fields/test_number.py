@@ -35,7 +35,8 @@ def test_max():
 def test_min():
     field = NumberParameters.from_json_field('test', True, {
         "type": "number",
-        "minimum": 2.99
+        "minimum": 2.99,
+        "default": 5.0
     })
     constraints = field.get_options()
     hamcrest.assert_that(constraints, hamcrest.has_entries({

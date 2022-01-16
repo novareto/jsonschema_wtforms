@@ -87,7 +87,8 @@ class NumberParameters(JSONFieldParameters):
     supported = {'integer', 'number'}
     allowed = {
         'enum', 'format',
-        'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'
+        'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum',
+        'default'
     }
 
     def get_factory(self):
