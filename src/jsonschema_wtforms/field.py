@@ -189,7 +189,7 @@ class ArrayParameters(JSONFieldParameters):
             if ref := items.get('$ref'):
                 definitions = params.get('definitions')
                 if not definitions:
-                    raise ValueError('Missing definitions.')
+                    raise NotImplementedError('Missing definitions.')
                 items = definitions[ref.split('/')[-1]]
             subfield = converter.lookup(items['type']).from_json_field(
                 name, False, items
