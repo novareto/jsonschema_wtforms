@@ -18,6 +18,7 @@ string_formats = {
     'ipv4': wtforms.fields.StringField,
     'ipv6': wtforms.fields.StringField,
     'binary': wtforms.fields.FileField,
+    'uri': wtforms.fields.URLField
 }
 
 
@@ -42,7 +43,7 @@ class StringParameters(JSONFieldParameters):
         return string_formats[self.format]
 
     @classmethod
-    def extract(cls, params: dict, available: str):
+    def extract(cls, params: dict, available: set):
         validators = []
         attributes = {}
         if {'minLength', 'maxLength'} & available:
@@ -50,6 +51,8 @@ class StringParameters(JSONFieldParameters):
                 min=params.get('minLength', -1),
                 max=params.get('maxLength', -1)
             ))
+        if 'default' in available:
+            attributes['default'] = params.get('default')
         if 'pattern' in available:
             validators.append(wtforms.validators.Regexp(
                 re.compile(params['pattern'])
@@ -86,7 +89,8 @@ class NumberParameters(JSONFieldParameters):
     supported = {'integer', 'number'}
     allowed = {
         'enum', 'format',
-        'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'
+        'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum',
+        'default'
     }
 
     def get_factory(self):
@@ -99,9 +103,11 @@ class NumberParameters(JSONFieldParameters):
         return wtforms.fields.FloatField
 
     @classmethod
-    def extract(cls, params: dict, available: str):
+    def extract(cls, params: dict, available: set):
         validators = []
         attributes = {}
+        if default := params.get('default'):
+            attributes['default'] = default
         if {'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'} \
            & available:
             validators.append(NumberRange(
@@ -119,6 +125,12 @@ class NumberParameters(JSONFieldParameters):
 class BooleanParameters(JSONFieldParameters):
     supported = {'boolean'}
 
+    @classmethod
+    def extract(cls, params: dict, available: set):
+        if 'default' in available:
+            return [], {'default': params['default']}
+        return [], {}
+
     def get_factory(self):
         if self.factory is not None:
             return self.factory
@@ -129,7 +141,7 @@ class BooleanParameters(JSONFieldParameters):
 class ArrayParameters(JSONFieldParameters):
 
     supported = {'array'}
-    allowed = {'enum', 'items', 'minItems', 'maxItems', 'default'}
+    allowed = {'enum', 'items', 'minItems', 'maxItems', 'default', 'definitions'}
     subfield: Optional[JSONFieldParameters] = None
 
     def __init__(self, *args, subfield=None, **kwargs):
@@ -152,12 +164,14 @@ class ArrayParameters(JSONFieldParameters):
         return partial(wtforms.fields.FieldList, self.subfield())
 
     @classmethod
-    def extract(cls, params: dict, available: str):
+    def extract(cls, params: dict, available: set):
         attributes = {}
         if 'minItems' in available:
             attributes['min_entries'] = params['minItems']
         if 'maxItems' in available:
             attributes['max_entries'] = params['maxItems']
+        if 'default' in available:
+            attributes['default'] = params['default']
         return [], attributes
 
     @classmethod
@@ -167,18 +181,21 @@ class ArrayParameters(JSONFieldParameters):
             raise NotImplementedError(
                 f'Unsupported attributes for array type: {illegal}')
 
-        subfield = None
         validators, attributes = cls.extract(params, available)
         if 'enum' in available:
             attributes['choices'] = [(v, v) for v in params['enum']]
 
-        if 'items' in available:
-            items = params['items']
-            if items:
-                subfield = converter.lookup(items['type']).from_json_field(
-                    name, False, items)
-            else:
-                subfield = None
+        if 'items' in available and (items := params['items']):
+            if ref := items.get('$ref'):
+                definitions = params.get('definitions')
+                if not definitions:
+                    raise NotImplementedError('Missing definitions.')
+                items = definitions[ref.split('/')[-1]]
+            subfield = converter.lookup(items['type']).from_json_field(
+                name, False, items
+            )
+        else:
+            subfield = None
         return cls(
             params['type'],
             name,
@@ -200,7 +217,7 @@ class ObjectParameters(JSONFieldParameters):
     supported = {'object'}
     allowed = {'required', 'properties', 'definitions'}
     fields: Dict[str, JSONFieldParameters]
-    formclass: ClassVar[Type[wtforms.form.Form]] = wtforms.form.Form
+    formclass: ClassVar[Type[wtforms.Form]] = wtforms.Form
 
     def __init__(self, fields, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -246,14 +263,22 @@ class ObjectParameters(JSONFieldParameters):
 
         requirements = params.get('required', [])
         fields = {}
+        definitions = params.get('definitions', {})
         for property_name, definition in properties.items():
             if property_name not in include:
                 continue
-            if (type := definition.get('type', None)) is not None:
-                field = converter.lookup(type)
+            if ref := definition.get('$ref'):
+                if not definitions:
+                    raise NotImplementedError('Missing definitions.')
+                definition = definitions[ref.split('/')[-1]]
+            if type_ := definition.get('type', None):
+                field = converter.lookup(type_)
+                if 'definitions' in field.allowed:
+                    definition['definitions'] = definitions
                 fields[property_name] = field.from_json_field(
                     property_name,
-                    property_name in requirements, definition)
+                    property_name in requirements, definition
+                )
             else:
                 raise NotImplementedError(
                     f'Undefined type for property {property_name}'
@@ -261,7 +286,7 @@ class ObjectParameters(JSONFieldParameters):
         validators, attributes = cls.extract(params, available)
         if validators:
             raise NotImplementedError(
-                'Object-types can have root validators')
+                "Object-types can't have root validators")
         return cls(
             fields,
             params['type'],

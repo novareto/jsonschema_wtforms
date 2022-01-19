@@ -35,7 +35,8 @@ def test_max():
 def test_min():
     field = NumberParameters.from_json_field('test', True, {
         "type": "number",
-        "minimum": 2.99
+        "minimum": 2.99,
+        "default": 5.0
     })
     constraints = field.get_options()
     hamcrest.assert_that(constraints, hamcrest.has_entries({
@@ -45,6 +46,7 @@ def test_min():
         )
     }))
     assert field.required is True
+    assert field.attributes['default']
     assert field.get_factory() == wtforms.fields.FloatField
     form = wtforms.form.BaseForm({"test": field()})
     form.process(data={'test': 2.10})

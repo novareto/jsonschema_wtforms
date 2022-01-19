@@ -46,6 +46,38 @@ def test_datetime_format():
     assert field.get_factory() == wtforms.fields.DateTimeField
 
 
+def test_uri_format():
+    field = StringParameters.from_json_field('test', True, {
+        "minLength": 1,
+        "maxLength": 2083,
+        "format": "uri",
+        "type": "string"
+    })
+    assert field.get_factory() == wtforms.fields.URLField
+    form = wtforms.form.BaseForm({"test": field()})
+    form.process()
+    assert form._fields['test']() == (
+        '<input id="test" maxlength="2083" minlength="1" '
+        'name="test" required type="url" value="">'
+    )
+
+
+def test_password_format():
+    field = StringParameters.from_json_field('test', True, {
+        "title": "Password",
+        "type": "string",
+        "writeOnly": True,
+        "format": "password"
+    })
+    assert field.get_factory() == wtforms.fields.PasswordField
+    form = wtforms.form.BaseForm({"test": field()})
+    form.process()
+    assert form._fields['test']() == (
+        '<input id="test" '
+        'name="test" required type="password" value="">'
+    )
+
+
 def test_IP_format():
     field = StringParameters.from_json_field('test', True, {
         "type": "string",
@@ -86,7 +118,7 @@ def test_binary():
     assert field.get_factory() == wtforms.fields.simple.FileField
     form = wtforms.form.BaseForm({"test": field()})
     assert form._fields['test']() == (
-        '<input accept=".pdf|image/png" id="test" name="test" '
+        '<input accept=".pdf,image/png" id="test" name="test" '
         'required type="file">'
     )
 
@@ -123,7 +155,8 @@ def test_length():
 def test_pattern():
     field = StringParameters.from_json_field('test', True, {
         "type": "string",
-        "pattern": "^The"
+        "pattern": "^The",
+        "default": "The "
     })
 
     constraints = field.get_options()
@@ -135,6 +168,7 @@ def test_pattern():
     }))
 
     assert field.required is True
+    assert field.attributes['default']
     assert field.get_factory() == wtforms.fields.StringField
     form = wtforms.form.BaseForm({"test": field()})
     form.process(data={'test': 'Dagger'})
@@ -144,6 +178,10 @@ def test_pattern():
     form.process(data={'test': 'The dagger'})
     assert form.validate() is True
     assert not form.errors
+    form.process()
+    assert form._fields['test']() == (
+        '<input id="test" name="test" required type="text" value="The ">'
+    )
 
 
 def test_enum():

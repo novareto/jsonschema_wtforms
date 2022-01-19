@@ -59,6 +59,7 @@ def test_complex_array():
 
     field = ArrayParameters.from_json_field('test', True, {
         "type": "array",
+        "default": [[1]],
         "items": {
             "type": "array",
             "items": {
@@ -66,6 +67,11 @@ def test_complex_array():
             }
         }
     })
+
+    form = wtforms.form.BaseForm({"test": field()})
+    form.process()
+    assert form._fields['test'].data == field.attributes['default']
+    assert form.validate()
 
     factory = field.get_factory()
     assert factory.func == wtforms.fields.FieldList
@@ -124,6 +130,6 @@ def test_files_array():
     })
     form = wtforms.form.BaseForm({"test": field()})
     assert form._fields['test']() == (
-        '<input accept="image/gif|.jpg|.png" id="test" multiple '
+        '<input accept="image/gif,.jpg,.png" id="test" multiple '
         'name="test" required type="file">'
     )

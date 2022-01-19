@@ -1,7 +1,14 @@
 import json
+from functools import lru_cache
+
 import wtforms.form
 import pytest
 import pathlib
+
+
+@lru_cache()
+def load_file(name):
+    return json.loads((pathlib.Path(__file__).parent / name).read_text())
 
 
 @pytest.fixture(scope="session")

@@ -8,6 +8,7 @@ from jsonschema_wtforms.field import BooleanParameters
 def test_boolean():
     field = BooleanParameters.from_json_field('test', True, {
         "type": "boolean",
+        "default": "true"
     })
 
     constraints = field.get_options()
@@ -18,6 +19,7 @@ def test_boolean():
     }))
 
     assert field.required is True
+    assert field.attributes['default']
     assert field.get_factory() == wtforms.fields.BooleanField
     form = wtforms.form.BaseForm({"test": field()})
     form.process(data={'test': 1})
