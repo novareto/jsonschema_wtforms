@@ -118,7 +118,7 @@ def test_binary():
     assert field.get_factory() == wtforms.fields.simple.FileField
     form = wtforms.form.BaseForm({"test": field()})
     assert form._fields['test']() == (
-        '<input accept=".pdf|image/png" id="test" name="test" '
+        '<input accept=".pdf,image/png" id="test" name="test" '
         'required type="file">'
     )
 

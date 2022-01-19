@@ -130,6 +130,6 @@ def test_files_array():
     })
     form = wtforms.form.BaseForm({"test": field()})
     assert form._fields['test']() == (
-        '<input accept="image/gif|.jpg|.png" id="test" multiple '
+        '<input accept="image/gif,.jpg,.png" id="test" multiple '
         'name="test" required type="file">'
     )

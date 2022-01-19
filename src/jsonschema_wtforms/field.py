@@ -74,7 +74,7 @@ class StringParameters(JSONFieldParameters):
                 if 'contentMediaType' in available:
                     ctype = params['contentMediaType']
                     if isinstance(ctype, (list, tuple, set)):
-                        ctype = '|'.join(ctype)
+                        ctype = ','.join(ctype)
                     kw = attributes.get('render_kw', {})
                     kw['accept'] = ctype
                     attributes['render_kw'] = kw
@@ -187,8 +187,9 @@ class ArrayParameters(JSONFieldParameters):
 
         if 'items' in available and (items := params['items']):
             if ref := items.get('$ref'):
-                definitions = params.get('definitions', {})
-                assert definitions, 'Missing definitions.'
+                definitions = params.get('definitions')
+                if not definitions:
+                    raise ValueError('Missing definitions.')
                 items = definitions[ref.split('/')[-1]]
             subfield = converter.lookup(items['type']).from_json_field(
                 name, False, items
