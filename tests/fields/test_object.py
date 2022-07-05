@@ -2,8 +2,8 @@ import pytest
 import wtforms.form
 import wtforms.fields
 import wtforms.validators
-
 from jsonschema_wtforms.field import ObjectParameters
+from jsonschema_wtforms._fields import GenericFormFactory
 
 
 def test_object():
@@ -26,7 +26,7 @@ def test_object():
     })
 
     factory = field.get_factory()
-    assert factory.func == wtforms.fields.FormField
+    assert isinstance(factory, GenericFormFactory)
 
 
 def test_ref_object():
@@ -117,5 +117,3 @@ def test_ref_object():
     assert devices.label == 'Devices'
     assert devices.name == 'devices'
     assert not devices.required
-
-

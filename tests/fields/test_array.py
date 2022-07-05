@@ -3,6 +3,7 @@ import wtforms.form
 import wtforms.fields
 import wtforms.validators
 from jsonschema_wtforms.field import ArrayParameters
+from jsonschema_wtforms._fields import GenericFormFactory, GenericFormField
 
 
 def test_array_without_items():
@@ -110,8 +111,9 @@ def test_complex_array_of_objects():
 
     factory = field.get_factory()
     assert factory.func == wtforms.fields.FieldList
-    subfield = factory.args[0].field_class
-    assert subfield == wtforms.fields.FormField
+    subfield = factory.args[0]
+    assert issubclass(subfield.field_class, GenericFormField)
+    assert subfield.kwargs['form_class'] is wtforms.form.BaseForm
 
 
 def test_files_array():

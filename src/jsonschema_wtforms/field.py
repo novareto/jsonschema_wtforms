@@ -3,7 +3,7 @@ import wtforms.form
 import wtforms.fields
 from functools import partial
 from typing import Optional, Dict, ClassVar, Type, Iterable
-from jsonschema_wtforms._fields import MultiCheckboxField
+from jsonschema_wtforms._fields import MultiCheckboxField, GenericFormFactory
 from jsonschema_wtforms.validators import NumberRange
 from jsonschema_wtforms.converter import JSONFieldParameters, converter
 
@@ -217,7 +217,7 @@ class ObjectParameters(JSONFieldParameters):
     supported = {'object'}
     allowed = {'required', 'properties', 'definitions'}
     fields: Dict[str, JSONFieldParameters]
-    formclass: ClassVar[Type[wtforms.Form]] = wtforms.Form
+    formclass: ClassVar[Type[wtforms.form.BaseForm]] = wtforms.form.BaseForm
 
     def __init__(self, fields, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -226,13 +226,7 @@ class ObjectParameters(JSONFieldParameters):
     def get_factory(self):
         if self.factory is not None:
             return self.factory
-        # We have to do that because wtforms doesn't want a BaseForm
-        # as a form in the FormField
-        formbase = type(
-            self.name, (self.formclass,),
-            {name: field() for name, field in self.fields.items()}
-        )
-        return partial(wtforms.fields.FormField, formbase)
+        return GenericFormFactory(self.fields, self.formclass)
 
     def get_options(self):
         # Object-types do not need root validators.

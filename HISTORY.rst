@@ -2,16 +2,12 @@
 History
 =======
 
-- Add support for local references in object and array types [ponym]
-- Add support for default values [ponym]
-
-0.10 (unreleased)
+0.11 (unreleased)
 -----------------
 
-- Nothing changed yet.
-
-
-0.9 (2021-11-07)
-----------------
-
-* ...
+- Added ignored keywords `AnyOf`, `if`, `else`. They don't make sense in
+  Form generation and can't be handled properly with wtforms.
+- Add `GenericFormField` and `GenericFormFactory` to handle complex objects.
+  It allows us to use `BaseForm` to generate the subfield in a deferred way.
+- Add support for local references in object and array types [ponym]
+- Add support for default values [ponym]
