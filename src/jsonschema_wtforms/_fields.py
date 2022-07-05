@@ -38,7 +38,7 @@ class GenericFormField(FormField):
         prefix = self.name + self.separator
         self.form = self.form_class(
             {name: bind() for name, bind in self.fields.items()},
-             prefix=prefix)
+            prefix=prefix)
 
         if isinstance(data, dict):
             self.form.process(

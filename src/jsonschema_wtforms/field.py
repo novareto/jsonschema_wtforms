@@ -33,7 +33,8 @@ class StringParameters(JSONFieldParameters):
 
     def __init__(self, type, name, required, validators, attributes, **kwargs):
         self.format = attributes.pop('format', 'default')
-        super().__init__(type, name, required, validators, attributes, **kwargs)
+        super().__init__(
+            type, name, required, validators, attributes, **kwargs)
 
     def get_factory(self):
         if self.factory is not None:
@@ -141,7 +142,9 @@ class BooleanParameters(JSONFieldParameters):
 class ArrayParameters(JSONFieldParameters):
 
     supported = {'array'}
-    allowed = {'enum', 'items', 'minItems', 'maxItems', 'default', 'definitions'}
+    allowed = {
+        'enum', 'items', 'minItems', 'maxItems', 'default', 'definitions'
+    }
     subfield: Optional[JSONFieldParameters] = None
 
     def __init__(self, *args, subfield=None, **kwargs):
