@@ -3,23 +3,9 @@ import wtforms.form
 import wtforms.fields
 from functools import partial
 from typing import Optional, Dict, ClassVar, Type, Iterable
-from jsonschema_wtforms._fields import MultiCheckboxField
 from jsonschema_wtforms.validators import NumberRange
+from jsonschema_wtforms.policy import Policy
 from jsonschema_wtforms.converter import JSONFieldParameters, converter
-
-
-string_formats = {
-    'default': wtforms.fields.StringField,
-    'password': wtforms.fields.PasswordField,
-    'date': wtforms.fields.DateField,
-    'time': wtforms.fields.TimeField,
-    'date-time': wtforms.fields.DateTimeField,
-    'email': wtforms.fields.EmailField,
-    'ipv4': wtforms.fields.StringField,
-    'ipv6': wtforms.fields.StringField,
-    'binary': wtforms.fields.FileField,
-    'uri': wtforms.fields.URLField
-}
 
 
 @converter.register('string')
@@ -38,9 +24,10 @@ class StringParameters(JSONFieldParameters):
     def get_factory(self):
         if self.factory is not None:
             return self.factory
+        policy = Policy.get()
         if 'choices' in self.attributes:
-            return wtforms.fields.SelectField
-        return string_formats[self.format]
+            return policy.generic['choice']
+        return policy.formats[self.format]
 
     @classmethod
     def extract(cls, params: dict, available: set):
@@ -61,7 +48,8 @@ class StringParameters(JSONFieldParameters):
             attributes['choices'] = [(v, v) for v in params['enum']]
         if 'format' in available:
             format = attributes['format'] = params['format']
-            if format not in string_formats:
+            policy = Policy.get()
+            if format not in policy.formats:
                 raise NotImplementedError(
                     f'String format not implemented: {format}.')
             if format == 'ipv4':
@@ -96,11 +84,12 @@ class NumberParameters(JSONFieldParameters):
     def get_factory(self):
         if self.factory is not None:
             return self.factory
+        policy = Policy.get()
         if 'choices' in self.attributes:
-            return wtforms.fields.SelectField
+            return policy.generic['choice']
         if self.type == 'integer':
-            return wtforms.fields.IntegerField
-        return wtforms.fields.FloatField
+            return policy.generic['integer']
+        return policy.generic['float']
 
     @classmethod
     def extract(cls, params: dict, available: set):
@@ -134,14 +123,17 @@ class BooleanParameters(JSONFieldParameters):
     def get_factory(self):
         if self.factory is not None:
             return self.factory
-        return wtforms.fields.BooleanField
+        policy = Policy.get()
+        return policy.generic['boolean']
 
 
 @converter.register('array')
 class ArrayParameters(JSONFieldParameters):
 
     supported = {'array'}
-    allowed = {'enum', 'items', 'minItems', 'maxItems', 'default', 'definitions'}
+    allowed = {
+        'enum', 'items', 'minItems', 'maxItems', 'default', 'definitions'
+    }
     subfield: Optional[JSONFieldParameters] = None
 
     def __init__(self, *args, subfield=None, **kwargs):
@@ -151,17 +143,18 @@ class ArrayParameters(JSONFieldParameters):
     def get_factory(self):
         if self.factory is not None:
             return self.factory
+        policy = Policy.get()
         if 'choices' in self.attributes:
-            return MultiCheckboxField
+            return policy.generic['multi_choice']
         if isinstance(self.subfield, StringParameters):
             if self.subfield.format == 'binary':
                 return partial(
-                    wtforms.fields.MultipleFileField,
+                    policy.generic['multi_file'],
                     **self.subfield.attributes)
         elif self.subfield is None:
             raise NotImplementedError(
                 "Unsupported array type : 'items' attribute required.")
-        return partial(wtforms.fields.FieldList, self.subfield())
+        return partial(policy.generic['array'], self.subfield())
 
     @classmethod
     def extract(cls, params: dict, available: set):
@@ -217,7 +210,7 @@ class ObjectParameters(JSONFieldParameters):
     supported = {'object'}
     allowed = {'required', 'properties', 'definitions'}
     fields: Dict[str, JSONFieldParameters]
-    formclass: ClassVar[Type[wtforms.Form]] = wtforms.Form
+    formclass: ClassVar[Type[wtforms.form.BaseForm]] = wtforms.form.BaseForm
 
     def __init__(self, fields, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -226,13 +219,8 @@ class ObjectParameters(JSONFieldParameters):
     def get_factory(self):
         if self.factory is not None:
             return self.factory
-        # We have to do that because wtforms doesn't want a BaseForm
-        # as a form in the FormField
-        formbase = type(
-            self.name, (self.formclass,),
-            {name: field() for name, field in self.fields.items()}
-        )
-        return partial(wtforms.fields.FormField, formbase)
+        policy = Policy.get()
+        return policy.generic['object'].factory(self.fields, self.formclass)
 
     def get_options(self):
         # Object-types do not need root validators.
@@ -243,8 +231,8 @@ class ObjectParameters(JSONFieldParameters):
     def from_json_field(
             cls, name: str, required: bool, params: dict,
             include: Optional[Iterable] = None,
-            exclude: Optional[Iterable] = None
-    ):
+            exclude: Optional[Iterable] = None):
+
         available = set(params.keys())
         if illegal := ((available - cls.ignore) - cls.allowed):
             raise NotImplementedError(
@@ -277,7 +265,8 @@ class ObjectParameters(JSONFieldParameters):
                     definition['definitions'] = definitions
                 fields[property_name] = field.from_json_field(
                     property_name,
-                    property_name in requirements, definition
+                    property_name in requirements,
+                    definition
                 )
             else:
                 raise NotImplementedError(
