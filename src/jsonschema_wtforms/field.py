@@ -139,13 +139,32 @@ class BooleanParameters(JSONFieldParameters):
         return wtforms.fields.BooleanField
 
 
+@converter.register('enum')
+class EnumParameters(JSONFieldParameters):
+    supported = {'enum'}
+    allowed = {'enum'}
+
+    @classmethod
+    def extract(cls, params: dict, available: set):
+        validators = []
+        attributes = {
+            'choices': [(v, v) for v in params['enum']]
+        }
+        if 'default' in available:
+            attributes['default'] = params['default']
+        return validators, attributes
+
+    def get_factory(self):
+        if self.factory is not None:
+            return self.factory
+        return wtforms.fields.SelectField
+
+
 @converter.register('array')
 class ArrayParameters(JSONFieldParameters):
 
     supported = {'array'}
-    allowed = {
-        'enum', 'items', 'minItems', 'maxItems', 'default', 'definitions'
-    }
+    allowed = {'items', 'minItems', 'maxItems', 'default', 'definitions'}
     subfield: Optional[JSONFieldParameters] = None
 
     def __init__(self, *args, subfield=None, **kwargs):
@@ -155,6 +174,8 @@ class ArrayParameters(JSONFieldParameters):
     def get_factory(self):
         if self.factory is not None:
             return self.factory
+        if isinstance(self.subfield, EnumParameters):
+            self.attributes['choices'] = self.subfield.attributes['choices']
         if 'choices' in self.attributes:
             return MultiCheckboxField
         if isinstance(self.subfield, StringParameters):
@@ -186,15 +207,15 @@ class ArrayParameters(JSONFieldParameters):
                 f'Unsupported attributes for array type: {illegal}')
 
         validators, attributes = cls.extract(params, available)
-        if 'enum' in available:
-            attributes['choices'] = [(v, v) for v in params['enum']]
-
         if 'items' in available and (items := params['items']):
             if ref := items.get('$ref'):
                 definitions = params.get('definitions')
                 if not definitions:
                     raise NotImplementedError('Missing definitions.')
                 items = definitions[ref.split('/')[-1]]
+
+            if 'enum' in items and 'type' not in items:
+                items['type'] = "enum"
             subfield = converter.lookup(items['type']).from_json_field(
                 name, False, items
             )
@@ -263,12 +284,17 @@ class ObjectParameters(JSONFieldParameters):
         fields = {}
         definitions = params.get('definitions', {})
         for property_name, definition in properties.items():
+            if 'allOf' in definition and len(definition['allOf']) == 1:
+                definition = definition['allOf'][0]
             if property_name not in include:
                 continue
             if ref := definition.get('$ref'):
                 if not definitions:
                     raise NotImplementedError('Missing definitions.')
                 definition = definitions[ref.split('/')[-1]]
+
+            if 'enum' in definition and 'type' not in definition:
+                definition['type'] = 'enum'
             if type_ := definition.get('type', None):
                 field = converter.lookup(type_)
                 if 'definitions' in field.allowed:

@@ -55,26 +55,11 @@ class GenericFormField(FormField):
         return GenericFormFactory(cls, fields, form_class)
 
 
-class GenericFormFactory:
+class GenericFormFactory(t.NamedTuple):
     fields: Fields
-    form_class: t.Type[BaseForm]
-    form_field: t.Type[GenericFormField]
-
-    def __init__(self, fields,
-                 form_class=BaseForm, form_field=GenericFormField):
-        self.form_field = form_field
-        self.fields = fields
-        self.form_class = form_class
+    form_class: t.Type[BaseForm] = BaseForm
+    form_field: t.Type[GenericFormField] = GenericFormField
 
     def __call__(self, **kwargs):
         return self.form_field(
             self.fields, form_class=self.form_class, **kwargs)
-
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return (
-                self.fields == other.fields and
-                issubclass(other.form_field, self.form_field) and
-                issubclass(other.form_class, self.form_class)
-            )
-        return False
