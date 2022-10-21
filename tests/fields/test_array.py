@@ -3,7 +3,7 @@ import wtforms.form
 import wtforms.fields
 import wtforms.validators
 from jsonschema_wtforms.field import ArrayParameters
-from jsonschema_wtforms._fields import GenericFormFactory, GenericFormField
+from jsonschema_wtforms._fields import MultiCheckboxField, GenericFormFactory, GenericFormField
 
 
 def test_array_without_items():
@@ -32,6 +32,18 @@ def test_simple_array():
     assert factory.func == wtforms.fields.FieldList
     subfield = factory.args[0].field_class
     assert subfield == wtforms.fields.FloatField
+
+
+def test_enum_array():
+
+    field = ArrayParameters.from_json_field('test', True, {
+        "type": "array",
+        "items": {
+            "enum": ["joan", "clothilde", "Jennifer"]
+        }
+    })
+    factory = field.get_factory()
+    assert factory == MultiCheckboxField
 
 
 def test_array_length():

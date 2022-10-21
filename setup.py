@@ -6,7 +6,6 @@ setup(
     install_requires=[
         'wtforms>=3',
         'jsonschema',
-        'jsonref'
     ],
     extras_require={
         'test': [

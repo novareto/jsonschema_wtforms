@@ -159,6 +159,23 @@ class EnumParameters(JSONFieldParameters):
             return self.factory
         return wtforms.fields.SelectField
 
+    @classmethod
+    def from_json_field(cls, name: str, required: bool, params: dict):
+        available = set(params.keys())
+        if illegal := ((available - cls.ignore) - cls.allowed):
+            raise NotImplementedError(
+                f'Unsupported attributes: {illegal} for {cls}.')
+        validators, attributes = cls.extract(params, available)
+        return cls(
+            'enum',
+            name,
+            required,
+            validators,
+            attributes,
+            label=params.get('title'),
+            description=params.get('description')
+        )
+
 
 @converter.register('array')
 class ArrayParameters(JSONFieldParameters):
@@ -214,11 +231,13 @@ class ArrayParameters(JSONFieldParameters):
                     raise NotImplementedError('Missing definitions.')
                 items = definitions[ref.split('/')[-1]]
 
-            if 'enum' in items and 'type' not in items:
-                items['type'] = "enum"
-            subfield = converter.lookup(items['type']).from_json_field(
-                name, False, items
-            )
+            if 'enum' in items:
+                subtype = 'enum'
+            else:
+                subtype = items['type']
+
+            subfield = converter.lookup(subtype).from_json_field(
+                name, False, items)
         else:
             subfield = None
         return cls(
