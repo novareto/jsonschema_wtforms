@@ -7,6 +7,11 @@ History
 
 - Nothing changed yet.
 
+0.13 (2022-11-09)
+-----------------
+
+- Fixed Enum Types
+
 
 0.12 (2022-08-25)
 -----------------
