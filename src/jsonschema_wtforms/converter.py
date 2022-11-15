@@ -4,6 +4,14 @@ import wtforms.validators
 from typing import List, Dict, Type, ClassVar, Tuple, Optional
 
 
+class NotRequired(wtforms.validators.Optional):
+
+    def __call__(self, form, field):
+        if entries := getattr(field, 'entries', None):
+            return
+        return super().__call__(form, field)
+
+
 class JSONFieldParameters(abc.ABC):
     supported: ClassVar[set]
     ignore: ClassVar[set] = {
@@ -46,7 +54,7 @@ class JSONFieldParameters(abc.ABC):
             'description': self.description,
             'validators': [
                 wtforms.validators.DataRequired() if self.required else
-                wtforms.validators.Optional(), *self.validators
+                NotRequired(), *self.validators
             ], **self.attributes
         }
 
