@@ -2,10 +2,12 @@
 History
 =======
 
-0.14 (unreleased)
+0.14 (2022-11-16)
 -----------------
 
-- Nothing changed yet.
+- Fixed `Optional` validator for arrays. It was acheived but now providing
+  a custom `Optional` drop in replacement, called `NotRequired`.
+
 
 0.13 (2022-11-09)
 -----------------
