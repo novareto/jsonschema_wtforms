@@ -1,5 +1,5 @@
 include HISTORY.rst
 include LICENSE
 include README.rst
-
+global-exclude *.pyc
 recursive-include tests *.py *.json
