@@ -53,7 +53,7 @@ class JSONFieldParameters(abc.ABC):
             'label': self.label,
             'description': self.description,
             'validators': [
-                wtforms.validators.DataRequired() if self.required else
+                wtforms.validators.InputRequired() if self.required else
                 NotRequired(), *self.validators
             ], **self.attributes
         }
