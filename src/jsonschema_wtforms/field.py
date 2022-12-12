@@ -188,6 +188,18 @@ class ArrayParameters(JSONFieldParameters):
         super().__init__(*args, **kwargs)
         self.subfield = subfield
 
+    def get_options(self):
+        """Override to use DataRequired instead of InputRequired
+        """
+        return {
+            'label': self.label,
+            'description': self.description,
+            'validators': [
+                wtforms.validators.DataRequired() if self.required else
+                NotRequired(), *self.validators
+            ], **self.attributes
+        }
+
     def get_factory(self):
         if self.factory is not None:
             return self.factory
