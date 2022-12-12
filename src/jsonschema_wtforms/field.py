@@ -4,8 +4,9 @@ import wtforms.fields
 from functools import partial
 from typing import Optional, Dict, ClassVar, Type, Iterable
 from jsonschema_wtforms._fields import MultiCheckboxField, GenericFormFactory
-from jsonschema_wtforms.validators import NumberRange
-from jsonschema_wtforms.converter import JSONFieldParameters, converter
+from jsonschema_wtforms.validators import NumberRange, DataRequired
+from jsonschema_wtforms.converter import (
+    JSONFieldParameters, converter, NotRequired)
 
 
 string_formats = {
@@ -195,7 +196,7 @@ class ArrayParameters(JSONFieldParameters):
             'label': self.label,
             'description': self.description,
             'validators': [
-                wtforms.validators.DataRequired() if self.required else
+                DataRequired() if self.required else
                 NotRequired(), *self.validators
             ], **self.attributes
         }
