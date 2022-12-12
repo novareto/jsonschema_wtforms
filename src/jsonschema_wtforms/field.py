@@ -106,6 +106,18 @@ class NumberParameters(JSONFieldParameters):
             return wtforms.fields.IntegerField
         return wtforms.fields.FloatField
 
+    def get_options(self):
+        """Override to use InputRequired instead of DataRequired
+        """
+        return {
+            'label': self.label,
+            'description': self.description,
+            'validators': [
+                wtforms.validators.InputRequired() if self.required else
+                NotRequired(), *self.validators
+            ], **self.attributes
+        }
+
     @classmethod
     def extract(cls, params: dict, available: set):
         validators = []
@@ -189,18 +201,6 @@ class ArrayParameters(JSONFieldParameters):
     def __init__(self, *args, subfield=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.subfield = subfield
-
-    def get_options(self):
-        """Override to use DataRequired instead of InputRequired
-        """
-        return {
-            'label': self.label,
-            'description': self.description,
-            'validators': [
-                wtforms.validators.DataRequired() if self.required else
-                NotRequired(), *self.validators
-            ], **self.attributes
-        }
 
     def get_factory(self):
         if self.factory is not None:
