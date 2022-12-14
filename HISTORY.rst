@@ -2,6 +2,13 @@
 History
 =======
 
+0.15 (2022-12-14)
+-----------------
+
+- `DataRequired` is not overriden by `InputRequired` for the NumberField,
+  in order to handle the 0 value.
+
+
 0.14 (2022-11-16)
 -----------------
 
