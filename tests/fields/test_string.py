@@ -3,7 +3,7 @@ import hamcrest
 import wtforms.form
 import wtforms.fields
 import wtforms.validators
-from jsonschema_wtforms.field import StringParameters
+from jsonschema_wtforms.field import StringParameters, EnumParameters
 
 
 def test_unknown_format():
@@ -221,3 +221,56 @@ def test_unhandled_attribute():
         "Unsupported attributes: {'unknown'} for "
         "<class 'jsonschema_wtforms.field.StringParameters'>."
     )
+
+
+def test_anyof():
+    field = StringParameters.from_json_field('test', True, {
+        "type": "string",
+        "oneOf": [
+            {"const": "0", "title": "männlich"},
+            {"const": "1", "title": "weiblich"},
+            {"const": "2", "title": "unbekannt"},
+        ]
+    })
+    constraints = field.get_options()
+    hamcrest.assert_that(constraints, hamcrest.has_entries({
+        'validators': hamcrest.contains_exactly(
+            hamcrest.instance_of(wtforms.validators.DataRequired),
+        ),
+    }))
+
+    assert field.required is True
+    assert field.get_factory() == wtforms.fields.SelectField
+    assert field.attributes == {
+        'choices': [
+            ('0', 'männlich'),
+            ('1', 'weiblich'),
+            ('2', 'unbekannt')
+        ]
+    }
+
+def test_enum_anyof():
+    field = EnumParameters.from_json_field('test', True, {
+        "type": "enum",
+        "oneOf": [
+            {"const": "0", "title": "männlich"},
+            {"const": "1", "title": "weiblich"},
+            {"const": "2", "title": "unbekannt"},
+        ]
+    })
+    constraints = field.get_options()
+    hamcrest.assert_that(constraints, hamcrest.has_entries({
+        'validators': hamcrest.contains_exactly(
+            hamcrest.instance_of(wtforms.validators.DataRequired),
+        ),
+    }))
+
+    assert field.required is True
+    assert field.get_factory() == wtforms.fields.SelectField
+    assert field.attributes == {
+        'choices': [
+            ('0', 'männlich'),
+            ('1', 'weiblich'),
+            ('2', 'unbekannt')
+        ]
+    }

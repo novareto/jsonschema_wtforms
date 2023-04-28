@@ -119,3 +119,23 @@ def test_enum():
     form.process(data={'test': 1})
     assert form.validate() is True
     assert not form.errors
+
+
+def test_zero():
+    field = NumberParameters.from_json_field('test', True, {
+        "type": "integer",
+        "enum": [0, 1, 2]
+    })
+    form = wtforms.form.BaseForm({"test": field()})
+    form.process(data={'test': 0})
+    assert form.validate() is True
+    assert not form.errors
+
+    field = NumberParameters.from_json_field('test', False, {
+        "type": "number",
+        "maximum": 20
+    })
+    form = wtforms.form.BaseForm({"test": field()})
+    form.process(data={'test': 0})
+    assert form.validate() is True
+    assert not form.errors

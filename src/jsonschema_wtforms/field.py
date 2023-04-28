@@ -30,7 +30,7 @@ class StringParameters(JSONFieldParameters):
 
     supported = {'string'}
     allowed = {
-        'format', 'pattern', 'enum', 'minLength', 'maxLength',
+        'format', 'pattern', 'enum', 'minLength', 'maxLength', 'oneOf',
         'writeOnly', 'default', 'contentMediaType', 'contentEncoding'
     }
 
@@ -63,6 +63,10 @@ class StringParameters(JSONFieldParameters):
             ))
         if 'enum' in available:
             attributes['choices'] = [(v, v) for v in params['enum']]
+        if 'oneOf' in available:
+            attributes['choices'] = [
+                (v['const'], v['title']) for v in params['oneOf']
+            ]
         if 'format' in available:
             format = attributes['format'] = params['format']
             if format not in string_formats:
@@ -106,18 +110,6 @@ class NumberParameters(JSONFieldParameters):
             return wtforms.fields.IntegerField
         return wtforms.fields.FloatField
 
-    def get_options(self):
-        """Override to use InputRequired instead of DataRequired
-        """
-        return {
-            'label': self.label,
-            'description': self.description,
-            'validators': [
-                wtforms.validators.InputRequired() if self.required else
-                NotRequired(), *self.validators
-            ], **self.attributes
-        }
-
     @classmethod
     def extract(cls, params: dict, available: set):
         validators = []
@@ -156,14 +148,19 @@ class BooleanParameters(JSONFieldParameters):
 @converter.register('enum')
 class EnumParameters(JSONFieldParameters):
     supported = {'enum'}
-    allowed = {'enum'}
+    allowed = {'enum', 'oneOf'}
 
     @classmethod
     def extract(cls, params: dict, available: set):
         validators = []
-        attributes = {
-            'choices': [(v, v) for v in params['enum']]
-        }
+        if 'enum' in params:
+            attributes = {
+                'choices': [(v, v) for v in params['enum']]
+            }
+        if 'oneOf' in params:
+            attributes = {
+                'choices': [(v['const'], v['title']) for v in params['oneOf']]
+            }
         if 'default' in available:
             attributes['default'] = params['default']
         return validators, attributes
@@ -209,6 +206,8 @@ class ArrayParameters(JSONFieldParameters):
             self.attributes['choices'] = self.subfield.attributes['choices']
         if 'choices' in self.attributes:
             return MultiCheckboxField
+        if 'oneOf' in self.attributes:
+            return MultiCheckboxField
         if isinstance(self.subfield, StringParameters):
             if self.subfield.format == 'binary':
                 return partial(
@@ -246,6 +245,8 @@ class ArrayParameters(JSONFieldParameters):
                 items = definitions[ref.split('/')[-1]]
 
             if 'enum' in items:
+                subtype = 'enum'
+            elif 'oneOf' in items:
                 subtype = 'enum'
             else:
                 subtype = items['type']
