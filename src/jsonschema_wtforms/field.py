@@ -64,7 +64,9 @@ class StringParameters(JSONFieldParameters):
         if 'enum' in available:
             attributes['choices'] = [(v, v) for v in params['enum']]
         if 'oneOf' in available:
-            attributes['choices'] = [(v, v) for v in params['enum']]
+            attributes['choices'] = [
+                (v['const'], v['title']) for v in params['oneOf']
+            ]
         if 'format' in available:
             format = attributes['format'] = params['format']
             if format not in string_formats:
@@ -107,18 +109,6 @@ class NumberParameters(JSONFieldParameters):
         if self.type == 'integer':
             return wtforms.fields.IntegerField
         return wtforms.fields.FloatField
-
-    def get_options(self):
-        """Override to use InputRequired instead of DataRequired
-        """
-        return {
-            'label': self.label,
-            'description': self.description,
-            'validators': [
-                wtforms.validators.InputRequired() if self.required else
-                NotRequired(), *self.validators
-            ], **self.attributes
-        }
 
     @classmethod
     def extract(cls, params: dict, available: set):
